@@ -8,7 +8,7 @@ This paper proposes FastT, a transparent module to work with the TensorFlow fram
 
 他是怎么想出来的？
 
-# introduction
+## introduction
 
 Deep Learning (DL) has become increasingly popular over the past years in various application domains such as computer vision, speech recognition and robotics. With increasingly complicated models and larger datasets, training of a deep neural network (DNN) model becomes an extremely time consuming job. Parallelizing the training using workers equipped with multiple GPUs or in a distributed environment is popular with current machine learning (ML) frameworks [2, 6, 9, 13]. 
 
@@ -82,13 +82,182 @@ FastT is built based on TensorFlow, addressing parallelism both within and acros
 
 Fig. 1 illustrates how FastT fits into the architecture of TensorFlow, and coloured blocks represent components we implement for FastT. The strategy calculator (算device placement和执行顺序)computes device placement and execution order for the current model using the algorithm to be introduced in 5.2.  The device placer (分配任务)assigns different devices to run different (sub-)operations according to the strategy computed by the strategy calculator.  In the dataflow executor, order enforcement执行器 is responsible for organizing the execution order of (sub-)operations. The cost models component记录执行时间和传输时间 records the execution time of (sub-)operations executed on different devices and the data transmission time when adjacent operations are handled on different devices.
 
-The workflow of FastT is as follows: Initially, FastT requires several pre-training steps to bootstrap引导,自引 the cost models, which uses different placement strategies to run the DNN model to update its cost models. To activate a new strategy computed with the updated cost models, the training session does checkpoints of current model parameters, and restarts to create a new graph based on the operation partition lists; then the device placer activates the device placement and the order enforcement module enforces the execution order of (sub-)operations. The training session then restarts with restored parameters from the checkpoints. After a new strategy is activated, FastT records the per-iteration model training time; if it finds that the per-iteration execution time with the new strategy is even longer than the previous one, it rolls back the strategy to the previous one. When the cost models become stable (the average time of the same (sub- )operation(s) on the same device(s) does not vary much), we finish the pre-training stage. Afterwards, the model is trained normally using placement and execution order strategies computed by the strategy calculator, and the cost models are updated only when the execution times have changed significantly based on our periodical profiling. 第一步cost models 预热,  第二步根据 操作分割list 创建新图, 然后分配设备和顺序. 记录每次时间, 时间更长就回滚上一个策略.
+The workflow of FastT is as follows: Initially, FastT requires several pre-training steps to bootstrap引导,自引 the cost models, which uses different placement strategies to run the DNN model to update its cost models. To activate a new strategy computed with the updated cost models, the training session does checkpoints of current model parameters, and restarts to create a new graph based on the operation partition lists; then the device placer activates the device placement and the order enforcement module enforces the execution order of (sub-)operations. The training session then restarts with restored parameters from the checkpoints. After a new strategy is activated, FastT records the per-iteration model training time; if it finds that the per-iteration execution time with the new strategy is even longer than the previous one, it rolls back the strategy to the previous one. When the cost models become stable (the average time of the same (sub- )operation(s) on the same device(s) does not vary much), we finish the pre-training stage. Afterwards, the model is trained normally using placement and execution order strategies computed by the strategy calculator, and the cost models are updated only when the execution times have changed significantly based on our periodical profiling. 第一步cost models 预热,  第二步根据 操作分割list 创建新图, 然后分配设备和顺序. 记录每次时间, 时间更长就回滚上一个策略. 之后只有执行时间异动大的时候再更新cost model.
 
+Currently, we use checkpointing and restart the model for activating a new strategy, since commonly adopted TensorFlow versions do not allow modification of a graph structure when the session has already run the graph. After the normal training stage starts, the cost models are not updated often. Cost Models. The computation cost model provides the execution time of a (sub-)operation on a device, using the **operation’s name and device** as the key. The communication cost model provides the tensor transfer time between adjacent operations assigned to two different devices, according to tensor size and device pair. Different from simulation-based measurement of such time [27], we profile the training process and record real execution/transmission time, based on the RunMetadata [5] generated by the TensorFlow profiler. 不仿真,记录真实的时间
 
+During the pre-training stage, FastT first uses its algorithm (DPOS in Sec. 5) to compute device placement and execution order strategies (a default data or model parallel strategy is used when cost models are empty), trains the DNN model with these strategies for several iterations (aka steps), and profiles the training process to update the cost models. Especially, when our algorithm finds a cost that it needs (e.g. , execution time of an operation on a device) is not in the cost model, it sets the cost to 0, so that the algorithm prefers to explore the placement, and then the profiler can obtain the real cost of this placement in the following training steps. It typically only takes several iterations to obtain the complete computation cost model, considering that we use data parallelism as the starting strategy (as long as the model can be fit into a GPU) by which each operation is replicated to different GPUs and their execution time on different devices is learned. For a large model that cannot be fit into a GPU, we use model parallelism, try different placements on multiple GPUs, and obtain the cost models.   model小就 data 并行, model太大了就model 并行
 
+To build the communication cost model, we gather tensors across the same source-destination device pairs into one group. For each group, we use linear regression to obtain a linear model: tensor size vs. transfer time. In each update of the cost model, newly collected data are fed and parameters of the linear model are re-computed. The models capture available bandwidth and potential congestion along each device-device path. 线性回归获得线性模型
 
+Strategy Calculator. It is the key component to carry out the algorithms that we will discuss in Sec. 5. During the pre-training stage, it calculates device placement, execution order and operation partition lists, and obtains the cost models. During the normal training stage, it periodically activates the profiler, updates the cost models, and recalculates new strategies. If the estimated per-iteration training time with the new strategies (among output of our DPOS algorithm) is smaller than that of previous strategies, the new strategies are activated.
 
+Device placer. Device placer is responsible for assigning each operation onto a device (GPU) according to the strategy computed by the strategy calculator. Order Enforcement. After obtaining execution order of (sub-)operations from the strategy calculator, the enforcement module sets the indices of (sub-)operations in the order list as their priorities, and enforces the execution order in TensorFlow’s executors.
 
+# 5 Operation Placement and Ordering Heuristics
 
+##  5.1 Listing Scheduling
 
+ We design a listing scheduling method to compute the device placement and execution order of operations, inspired by algorithms handling DAG task scheduling over multiprocessors [20, 41]. With listing scheduling, the whole solution space is reduced in two phases: (i) operation prioritization for deciding device placement sequence of all operations, and (ii) device selection which chooses the operation in the order of their priorities and assigns the best device to each selected operation, to minimize the operation’s finish time. 操作优先级，用于决定所有操作的设备放置顺序, (ii) 设备选择，按优先级顺序选择操作并将最佳设备分配给每个选定的操作，以最小化操作的完成时间。
+
+**Operation Prioritization**. The priority decides the device placement sequence, which is slightly different from the execution order of operations. We exploit a critical-path [41] based heuristic for computing a rank for each operation oi in the DAG:
+$$
+rank_u(o_i) = w_i + max(c_i,j +rank_u (o_j)), oj是oi的后继
+$$
+where w_i is the maximal execution time of operation oi (over different devices that it could be assigned to run), succ(oi) is the set of immediate successor operations of oi , and ci,j is the maximal transmission time of the tensor from operation oi to operation o_j (over different device pairs that they can be located on). rank_u (oi) represents **the length of the critical path from operation oi to the exit operation**, and can be computed recursively by traversing the computation graph, starting from the exit operation. The rank of the exit operation is: rank_u (o_exit ) = w_exit. 好像是从后往前从exit开始计算 rank,上面那个rank的计算方式也是一个从sink节点开始，recursive算出来的.
+
+​	we use rank_u (oi) as oi ’s priority, such that the next operation to be placed is always the entry operation in the new critical path of the current sub-graph, excluding 排除the operations that has already been considered. 
+
+**Device Selection & Execution Order**. We use EST (oi ,dj) and EFT (oi ,dj) to represent the earliest **execution start time** and the earliest **execution finish time** of operation oi on device dj , respectively. For the entry operation o_entry of the DAG, we have     入口开始时间为0
+
+For other operations, EFT and EST can be computed starting from the entry operation as follows: dj就是device j,  oi就是operation i
+
+EST (oi ,dj)  = max{avail[j] 最早可用时间, max( EFT(om) +the actual tensor transmission time between oi ’s immediate predecessor om and oi ) }om 从oi的直接前驱操作中选一个出来.
+
+EFT  =w_ij +EST (oi ,dj)  wij是device j上的操作i执行时间
+
+Here, avail[j] is the earliest available time of device dj ;pred(oi) is the set of immediate predecessor operations of oi ; cˆ dj m,i is the actual tensor transmission time between oi ’s immediate predecessor om and oi , if oi is assigned to device dj . Note that avail[j] is not the time when dj completes the execution of its last assigned operation不一定是完成最后一个任务: it is possible for our algorithm to **insert an operation** into an earliest idle空闲 time slot between two already-scheduled operations on a device; the length of the idle time slot should be sufficient to execute this operation, and inserting the operation into this idle time slot should preserve precedence优先 constraints(我也不知道优先约束是啥); avail[j] is the start time of such a timeslot. We use ST (oi) and FT (oi) to represent the actual execution start time and execution finish time of operation oi .
+
+问题1:算法5.1是否是我理解的这样? est的max意思是不是就是选最早的一个?
+
+不是, 是最late的那个.他得等到前继所有节点执行完，才能开始执行. 应该是因为要等所有参数到达了之后再执行. 
+
+问题2: 什么是优先约束? 是不是就是操作有的要先有的后.
+
+Our algorithm aims to minimize the overall actual execution time of operations on the computation graph’s critical path (based on their placement), which is the lower bound of the end-to-end execution time of the DAG (there could be gap time between operation executions). To compute the critical path, the entry operation is selected, and then we recursively select the operation with the largest rank among the successors. 就是递归选择后继.是不是时间长的先执行? 时间短的后执行? 不太对, rank大不代表时间长.rank代表的是从他这里开始，执行，一直执行到最后的sink节点，所需要花费的时间.它本身这个节点时间很短，他的rank也有可能很大.
+
+起始节点是这个图中唯一一个入度为零的节点.然后找这个起始节点相邻的所有的节点中，rank最大的.如果有多个入度为0的节点，你可以创建一个虚拟的节点，然后把这个虚拟节点指向所有其他入度为零的节点，然后这个起始节点就是entry
+
+​	We consider operations in the DAG according to the order computed. If the operation is on the critical path, assign it to a **critical-path device**.这里讲了怎么选择关键路径设备,就是模拟然后计算一下 We choose a critical-path device as follows: for each available device, we simulate placing as many remaining operations on the critical path as possible onto the device (within its memory capacity), and compute the average execution time of the operations on the device using values from the computation cost model; we choose the device with the smallest average time as **a critical-path device**. If an operation is not on the critical path, we assign it to another device with sufficient memory which minimizes the EFT of the operation.因为关键路径是最费时的, 所以要用计算关键路径操作最快的设备,叫做critical-path device. During operation-device assignment, when a critical-path device’s memory **is full**, we find another critical-path device and assign as many critical-path operations to it as possible.直到这个设备满了的话找另一个critical-path device,然后assign 尽可能多的关键路径操作给它.  这一段很重要, 就是讲怎么计算device placement和执行顺序的.
+
+​	Our Device Placement and Operation Sequencing (DPOS) algorithm is given in Alg. 1. We identify the following properties of DPOS. We use ωDPOS to represent the end-to-end processing time of the DAG. The time intervals in [0,ωDPOS ] can be categorized into two exclusive sets A and B:A includes all time intervals when all the devices are busy, and B includes intervals when at least one device is idle. B是有停的device的时刻.If B = ∅, DPOS is obviously optimal. Thus, we focus on the case where B , ∅. We assume B is the union of N intervals: We use O to represent the set of all operations in the DAG.
+
+```python
+# Algorithm 1 Device Placement and Operation Sequencing (DPOS) 
+1: Input: Graph G(O,E); Device Set D; Computation Cost Model Ccomp; Communication Cost Model Ccmmu;
+2: Output: New Device Placement Strategy Snew; Execution Order List A[]; Finish Time of Exit Operation FT(oexit).
+3: Set wi to be the max execution time ofoperation i andci, j to be the max communication time between operations i and j .
+4: Compute ranku, critical path SETCP. 
+5: Select a device set dCP to place operations in critical path based on average computation time and memory capacity.
+6: Create priority queue L for operations by decreasing order ofranku values.
+7: while L is not empty do 
+8:	oi ← L.dequeue()
+9:
+10: 11: 12: 13: 14: 15: 16: 17: 18: 19:
+20:
+ if oi ∈ SETCP then
+Snew[oi ] = dCP(oi ) else for d in D do
+if memory need ofoi exceeds capacity ofd then EFT(oi ,d) ← +∞
+else Compute EFT(oi ,d) end if end for
+Snew[oi ] = arg min d∈D
+EFT(oi ,d) FT(oi ) = EST(oi , Snew[oi ])
+21: end if 22: end while 23: Compute Execution list A by sorting operations in ascending order ofST(oi )
+24: Compute FT(oexit)=EFT(oexit , Snew[oexit]) 25: Return: Snew, A, FT(oexit)
+```
+
+Lemma 引理1 There exists a chain X : oi_m → oi_m-1 → . . . → oi1 in O that covers B, if the memory capacity of devices is sufficient to host operations assigned. 如果有容量, 那么一定存在一个chainX可以coverB.That is, the total execution time plus maximal overall data transmission time along chain X is no less than the total duration of B:
+
+Theorem 1 The end-to-end processing time of the DAG, ωDPOS , satisfies: ωDPOS ≤ 2ωopt + Cmax , where ωopt is the optimal DAG execution time in an ideal system without tensor transmission time, and Cmax is the maximal overall data transmission time along any chain in O. The detailed proofs are given in the Appendix. DAG 的端到端处理时间 ωDPOS 满足： ωDPOS ≤ 2ωopt + Cmax ，其中 ωopt  optimal是没有张量传输时间的理想系统中的最佳 DAG 执行时间，Cmax 是沿 O 中的任意链的最大总数据传输时间。详细的证明在附录中给出.
+
+## 5.2 Operation Splitting操作分解
+
+​	The DAG execution time may be further reduced by **splitting operations on the critical path into sub-operations**, for further parallelism to reduce the overall execution time of the critical path. Different types of operations have different dimensions to be split. For example, Conv2D can be partitioned on the batch size dimension for fine-grained data parallelism within the operation, and also on the channel dimension to achieve fine-grained model parallelism. Splitting operations does not change training semantics through graph modification, hence resulting in no model accuracy loss. We propose our second heuristic OS-DPOS (Operation Splitting Device Placement and Operation Sequence) to perform operation splitting based on DPOS. 
+
+​	The input graph to Alg. 2 is decided as follows: if the model is too large to be fit into a single device, we input the DAG of the model; otherwise, we construct a data parallel graph based on the model DAG as the input, where the model is replicated as many times as the number of devices 一开始数据并行但不是纯数据并行(i.e., we adopt data parallelism as our start deployment strategy in order for the algorithm to identify a better strategy beyond pure data parallelism). In the algorithm, a function SplitOperation is invoked to **generate the updated graph** when an operation is split on a specific dimension with a certain split number. As an example, here we only show one split method which is suitable for some types of operations (e.g. , suitable for Conv2D and not for BatchNorm). Different split methods are available for splitting other types of operations [7, 26, 27].
+
+The algorithm first invokes Alg. 1 to compute **an initial device placement and execution order.**也就是代码里第三行 Then it calculates the new critical path based on the placement strategy and splits the operations along the critical path in descending order of their computing time. 按降序拆分,就是把最长的时间给拆分. For a specific operation, Alg. 1 is called to compute the corresponding critical path, device placement and execution order after splitting it on each dimension and with each split number, and the best split of the operation which achieves the smallest FT of the exit operation in the DAG is identified. Only if this time with the best split is smaller than before splitting, the algorithm records the corresponding best split dimension and split number, and adds the decisions to the split list; otherwise, the algorithm stops the loop and no longer explores the remaining operations on the critical path. 先计算初始device placement 和执行顺序, 然后计算 新关键路径.
+
+```python
+# Algorithm 2 OS-DPOS 
+1: Input: Graph G(O, E); Device Set D; Computation Cost Model Ccomp; Communication Cost Model Ccmmu;
+2: Output: Operation Split List SP[]; New Device Placement Strategy S; Execution Order List A;
+3: Compute Snew; A[]; FTold(oexit) using DPOS(G,D, Ccomp,Ccmmu). # 就是init 
+4: Compute Critical path (CP) based on Snew and G. 
+5: sort CP by descending order of computation time. 
+6: Initialize SP ← [];Ginit ←G(O, E);S ← Snew 
+7: for operation op in CP do 
+8: With different d ∈ parallelizable dimensions and n∈ # of GPUs(D), call DPOS(SplitOperation(Ginit, op,d, n), D,Ccomp,Ccmmu,S) and record the smallest FT(oexit) and corresponding dimension d, split num n, Snew and Anew.
+9: if FT(oexit) < FTold(oexit) then
+10:Update: FTold(oexit) ← FTnew(nexit), Ginit = Gnew, S ← Snew, SP ← SP ∪ (op,d, n), A ←Anew #把拆分操作 (op,d, n) 放在SP中
+11:else 
+12:	break # stops the loop and no longer explores the remaining operations on the critical path.
+13: end if 
+14: end for 
+15: Return: SP, S, A.
+16: function SplitOperation (Graph:G(O,E), Operation:op, Dimension:d, Split num:n)
+17: for i ← 1, 2, ..., n do
+18: Create new sub-operation si
+19: end for 
+20: for operation pre ∈ predecessors(op) do
+21:add a split node sp and connect it to the n partitions split from edge (pre, op) on dimension d: p1,p2, ...,pn.
+22: connect pi to si .
+23: end for 
+24: for operation suc ∈ successors(op) do
+25:add a concatenate(= connect) node con that concatenates s1, s2, ..., sn.
+26: connect con to suc.
+27: end for 28: Remove operation op and edges connecting to it. 29:
+Return: Updated graph Gnew 30: end function
+```
+
+It is noteworthy that FastT may not use all the input devices, and can choose a subset which achieves better performance than using all. Strategy calculator in FastT carries out Alg. 1 to derive device placement and execution order of all (sub-)operations.
+
+## 6 Implementation and Evaluation 
+
+### 6.1 System Implementation
+
+We implement FastT over TensorFlow 1.14. 
+
+**Strategy Calculator** is built in Python client of TensorFlow (1660 LoC in Python). We add the control logic inside **the initialize function and run function** of class BaseSession. It is the entry point to invoke TensorFlow C++ core runtime from Python, and most high-level Python APIs are based on the BaseSession class. Therefore, model developers can transparently use our module with their existing models. The strategy calculator activates TensorFlow profiler for updating the cost models and computes new strategies in the run function of BaseSession using a single CPU core.  修改基类中的函数实现transparent
+
+**Device Placer** is simple module implemented with 20 LOC in Python. It first checks the co-location constraints of operations and then uses built-in functions of TensorFlow to implement the device placement. When the training is done over multiple machines, we use **in-graph** [4] implementation so that a single global computation graph can be placed on these machines.
+
+**Cost Model.** We extend TensorFlow internal tracer to fetch the raw meta-data of each operation during the training process (198 LOC in Python), for building the cost models. **Order Enforcement** is implemented within the executors in TensorFlow C++ runtime (107 LOC). By default, the runtime scheduler executes the operations in the ready queue following FIFO (First-In-First-Out). We set each operation with a priority according to the execution order computed by the strategy calculator, and schedule operations according to their priorities. We used to directly add control dependency to enforce execution order, which adds strong constraints in the graph, loses the chance for further optimization (such as the graph pruning by TensorFlow), and sometimes leads to poor performance. We hence exploit the priority-based method to provide the scheduler more flexibility, while satisfying control dependencies.  给每个操作根据执行顺序设置优先级.
+
+​	Since we directly modify the code in TensorFlow's `Session.run` function to take over the control of all following processing, the developers do not need to change a single line of their model code, when using the TensorFlow framework compiled with our modules.
+
+### 6.2 evaluation methodology
+
+**Testbed setup.** We deploy FastT-boosted TensorFlow framework in physical machines, each equipped with 8 NVIDIA Tesla V100 GPUs with NVLinks, where each GPU has 16GB.memory, and 2 Intel(R) Xeon(R) Platinum 8163 CPUs, where each CPU has 24 cores. 
+
+**Benchmark models.** We experiment with 5 CNN models (VGG19 [39], ResNet200 [24], AlexNet [29], LeNet [1] and Inception-v3 [40]) and 4 NMT models (Transformer [43], Bert-large [17], GNMT [46] and RNNLM [47]). 
+
+**Baseline strategies.** We use data parallel (DP) strategies and results of REINFORCE [32], GDP [48], FlexFlow [27] and Post [18] as baselines. For data parallelism, we adopt default data parallel implementation in TensorFlow slim [3], and compare the performance under both strong scaling (which retains the same global batch size when the number of GPUs varies) and weak scaling (which retains a fixed batch size at each GPU). For REINFORCE, GDP, FlexFlow and Post, we compare the strong scaling performance with results extracted from their papers (they all adopt strong scaling): REINFORCE, GDP and Post need tens of servers to compute their policies; the available source code of Flexflow only includes the part of applying a given strategy but not the code for running their search method to find the strategy, and is hence not directly usable for experimental comparison.
+
+We use **training speed (samples/second)** rather than the per-iteration training time as the performance metric, because in weak scaling, the global batch size grows with the number of GPUs, and as a result per-iteration times cannot be directly compared.每次迭代时间不同,性能指标是样本/秒.  Since our method preserves the semantics of model training, and does not change the number of iterations to converge for each model, we do not show the total iteration number in our evaluation. In strong scaling, we choose the global batch size to fully utilize a single GPU to ensure no out-of-memory (OOM) when using only one GPU for training; in weak scaling, we choose the per-GPU batch size to fully utilize a single GPU without incurring OOM. All our results are averaged over 500 iterations after a warm-up of 10 iterations.
+
+### 6.3 Performance of FastT 
+
+**Per-iteration speed-up.** In Table 1, we see that with strong scaling, FastT outperforms default data parallelism in most cases, and achieves up to 59.4% speed-up when training VGG using 4 GPUs. With more GPUs (e.g., 8), the performance of both strategies may degrade due to more communication overhead among model replicas and smaller batch size per GPU which cannot achieve good GPU utilization, but FastT still does better. In the case of 8 GPUs (2 servers), we experiment in a distributed setting with 4 GPU cards each on two servers, and include inter-server communication time into our cost models. The improvement of FastT over the default strategy is in general better in this distributed setting, than with all 8 GPUs on the same server. This is because the default strategy performs worse in a multi-server setting than on the same server, while FastT can find better solutions by capturing the communication overhead across servers using the communication cost model. FastT可以capture通讯开销来改进.
+
+With weak scaling, the performance of data parallelism in Table 2 is similar to the performance reported in DAWN-Bench [15] and NVIDIA Benchmark [8].We see that FastT still performs better than data parallelism, and a 19.2% speed-up when training VGG in the case of 16 GPUs (2 servers). As compared to the speed-up in Table 1, the improvement over data parallelism is smaller, which is because the utilization of each GPU with data parallelism is much higher than in the strong scaling setting, leaving us a much smaller optimization space by moving operations around across the devices.数据并行性的改进较小，这是因为具有数据并行性的每个 GPU 的利用率远高于强扩展设置下，通过在设备之间moving operation 的优化空间小.
+
+We observe that the improvement with FastT is better with Bert-large than Transformer. The Transformer model can be fit into a single GPU with the standard batch size, so that data parallelism performs pretty well already. When training Bert-large, the batch size per GPU is much smaller, as otherwise out-of-memory (OOM) errors occur; hence training Bert-large with data parallelism may not do well due to the underutilization of GPU computation capacity with the small batch size. On the other hand, FastT can find better solutions of placing most operations in the model in one GPU, to better utilize GPU computation capacity while minimizing inter-GPU communication.
+
+Unless otherwise stated, our following experiments are based on strong scaling, and the global batch size used to train a model is the same as indicated in Table 1.
+
+Support larger batch size for very large models. For bert-large, its model cannot be fit in a single GPU when batch size is larger than 16. We set the maximal sequence lengths in bert models to be 64. Table 3 shows that with FastT,we can efficiently exploit 2 GPUs to train it with larger global batch sizes (e.g. , 48), while data parallelism can only support global batch size of 32. In addition, developers do not need to worry about manual placement of such a large model between devices. 
+
+**Order Enforcement.** We evaluate the performance gain brought by operation execution ordering, and compare with TensorFlow’s default execution order. In TensorFlow, the executor chooses operations from a ready queue using FIFO. In Fig. 2, each model is run using 2 GPUs. We see that per iteration time is reduced by up to 26.9% when order enforcement is enabled. 订单执行或者顺序执行
+
+**Time for strategy calculation.** Table 4 shows the time needed to compute placement and execution order with Alg. 2 in FastT, which is within **several minutes for most models**. It takes more than 1 hour to compute the strategies for deploying the Transformer model over 8 GPUs, due to the very large number of operations in the model. Besides, the strategies are computed through real model training, such that the strategy search time includes profiling time and system restart time (for activating changed strategies). Still FastT can compute the strategies using much less time and resources than existing approaches such as REINFORCE and GDP.
+
+### 6.4 Comparison with other strategies
+
+ We next compare the speed-up of FastT with REINFORCE, GDP, FlexFlow and Post. We use strong-scaling data parallelism as the baseline, and show each strategy’s processing speed divided by that of the data parallel strategy in Fig. 3. The models being evaluated are those with results in the respective papers as well. FastT outperforms REINFORCE, GDP and Post in all respective cases, as REINFORCE, GDP and Post do not consider data parallelism and operation split, and hence their solution spaces are limited. FlexFlow may find a better solution than FastT, due to its larger solution space and extensive search-based algorithm to find the strategy. However, FastT’s performance is close; being compatible with TensorFlow, it is more generally usable. Further, the time complexity of FastT is linear with the number of operations and devices, while the search space in FlexFlow increases exponentially with the increase of operations and devices. 好处: 兼容, 更普遍可用. 时间复杂度线性.
+
+### 6.5 Analysis of result placements
+
+**Operation placement.** Fig. 4 shows the number of operations assigned to each GPU with FastT. Different from pure data parallelism that assigns model replica to each GPU, FastT does not always allocate operations evenly among GPUs. In the case of 4 GPUs, one GPU has many more operations while the numbers on others are pretty even. Our investigation shows that replicas of operations with large parameters are placed in one GPU rather than 4 GPUs, to avoid inter-GPU aggregation(问题:  我不明白这个inter-GPU是啥意思,是不是因为传输这些梯度代价大,好像是的看下面说广播参数到所有副本的开销) of gradients of these parameters during training. For other computation-intensive operations, they are evenly placed onto 4 GPUs to reduce end-to-end processing time, which implies that the computation time saving due to data parallelism exceeds the cost for aggregating gradients across 4 GPUs for these operations.  我们的调查表明，具有大参数的操作的副本放置在一个 GPU 中而不是 4 个 GPU 中，以避免在训练期间这些参数的梯度在 GPU 间聚合. 对于其他计算密集型操作，它们被均匀地放置在 4 个 GPU 上以减少端到端处理时间，这意味着由于数据并行性而节省的计算时间超过了为这些操作在 4 个 GPU 上聚合梯度的成本。
+
+**Operation split.** Table 5 shows the split decisions for some representative operations in Vgg-19, as made by FastT, together with their execution time (before splitting) and parameter sizes. We can see that in Vgg-19, some conv operations have longer execution time than others, so they are most likely to be split. Fc operations with **large parameter sizes are not split**, to avoid overhead of broadcasting parameters to all replicas. Operations being split usually have longer execution time and smaller parameter size, 拆分的时间长但是参数sizes小. to strike a good trade-off between computation performance gain and extra communication overhead incurred by the split.
+
+Table 6 compares model training performance when we enable operation split in FastT and not. The experiments are done under the settings achieving the best speedup as in Table 1. We see that with CNN models such as Inception, Vgg and ResNet, Conv2D and Conv2Dbp are the key operations whose splits bring performance gain. However, for LeNet and AlexNet, these operations are not split due to small input tensor sizes to them (such that these operations’ computation time is small). Further, operations in LSTM-based NMT models (GNMT and RNNLM) are not split because no computation intensive operation is found. For attention-based models (Transformer and Bert-large), MatMal operations are split, which are the most computation-intensive operations in these models. 这段就讲了各种模型拆分哪些操作
+
+**Time Breakdown.** We show the average computation time and memory copy time (i.e., tensor transfer time) when training the models using pure data parallelism and FastT on 2 GPUs in Fig. 5. Due to overlap of computation and memcpy (communication), the overall per-iteration training time is usually not equal to the sum of computation and memcpy time. We observe that even though **the computation time with FastT is increased, its memcpy time and per-iteration time are reduced**. Main reasons are as follows. With data parallelism, operation replicas require gradients from other replicas in each iteration, which involves memory copy since the replicas are assigned to different GPUs. FastT can reduce memcpy cost by assigning some replicas of an operation to the same GPU (as validated by its uneven operation assignment among all GPUs), which on the other hand may increase GPU time due to processing more operations on some GPU.对于数据并行性，操作副本在每次迭代中都需要来自其他副本的梯度，这涉及内存复制，因为副本被分配给不同的 GPU。 FastT 可以通过将一个操作的一些副本分配给同一个 GPU 来降低 memcpy 成本（正如其在所有 GPU 之间不均匀的操作分配所验证的那样），另一方面，由于在某些 GPU 上处理更多操作，这可能会增加 GPU 时间。
+
+## 7 Related Work
+
+之前的缺点:  只考虑了计算图的模型并行, 黑盒学习时间久消耗计算资源多.
+
+ **Device Placement for Deep Learning Models**. Researchers have been seeking the best placement strategy to assign operations in a DNN to different devices, to minimize execution time of the computation graph.  The Google team used reinforcement learning to tune a placement strategy [32]. Some follow-upwork propose more advanced algorithms to reduce learning time for deriving the policy [19, 21, 30], enlarge the solution space for better strategies [12, 26, 27, 44], optimize the reward function and sampling methods [18, 19, 33], or learn a more general model applicable to different computation graphs [10, 35, 36, 48]. For example, Placeto [10], GDP [48] and REGAL [35] use GNNs to generalize their models so that they can handle unseen computation graphs, and REGAL further considers the execution order of operations; however, these proposals only consider **model parallelism of computation graphs**, so the performance is limited. All the above studies treat the placement problem as a black box, and usually require hours of learning to obtain a satisfying policy, using large amounts of computing resource for policy training. Stanza [45] separates CONV layers and fully-connected layers into different workers to reduce communication overhead; it only optimizes these two types of layers.我们可以优化所有层 DLPlacer [34] studies hybrid data and model parallelism, but its device placement is based on a subgraph of the model rather than the entire graph.没有考虑全图.
 
