@@ -106,13 +106,13 @@ Currently, we use checkpointing and restart the model for activating a new strat
 
 **Strategy Calculator.** It is the key component to carry out the algorithms that we will discuss in Sec. 5. During the pre-training stage, it calculates device placement, execution order and operation partition lists, and obtains the cost models. During the normal training stage, it periodically activates the profiler, updates the cost models, and recalculates new strategies. If the estimated per-iteration training time with the new strategies (among output of our DPOS algorithm) is smaller than that of previous strategies, the new strategies are activated.
 
-**Device placer.** Device placer is responsible for assigning each operation onto a device (GPU) according to the strategy computed by the strategy calculator. Order Enforcement. After obtaining execution order of (sub-)operations from the strategy calculator, the enforcement module sets the indices of (sub-)operations in the order list as their priorities, and enforces the execution order in TensorFlow’s executors.
+**Device placer.** Device placer is responsible for assigning each operation onto a device (GPU) according to the strategy computed by the strategy calculator. **Order Enforcement.** After obtaining execution order of (sub-)operations from the strategy calculator, the enforcement module sets the indices of (sub-)operations in the order list as their priorities, and enforces the execution order in TensorFlow’s executors.
 
 ## 5 Operation Placement and Ordering Heuristics
 
 ##  5.1 Listing Scheduling
 
- We design a listing scheduling method to compute the device placement and execution order of operations, inspired by algorithms handling DAG task scheduling over multiprocessors [20, 41]. With listing scheduling, the whole solution space is reduced in two phases: (i) operation prioritization for deciding device placement sequence of all operations, and (ii) device selection which chooses the operation in the order of their priorities and assigns the best device to each selected operation, to minimize the operation’s finish time. 操作优先级，用于决定所有操作的设备放置顺序, (ii) 设备选择，按优先级顺序选择操作并将最佳设备分配给每个选定的操作，以最小化操作的完成时间。
+ We design a listing scheduling method to compute the device placement and execution order of operations, inspired by algorithms handling DAG task scheduling over multiprocessors [20, 41]. With listing scheduling, the whole solution space is reduced in two phases: (i) operation prioritization for deciding device placement sequence of all operations, and (ii) device selection which chooses the operation in the order of their priorities and assigns the best device to each selected operation, to minimize the operation’s finish time. (i)决定所有操作的设备放置顺序, (ii) 选择操作 然后分配给best device
 
 **Operation Prioritization**. The priority decides the device placement sequence, which is slightly different from the execution order of operations. We exploit a critical-path [41] based heuristic for computing a rank for each operation oi in the DAG:
 $$
@@ -123,6 +123,8 @@ where w_i is the maximal execution time of operation oi (over different devices 
 ​	we use rank_u (oi) as oi ’s priority, such that the next operation to be placed is always the entry operation in the new critical path of the current sub-graph, excluding 排除the operations that has already been considered. 
 
 **Device Selection & Execution Order**. We use EST (oi ,dj) and EFT (oi ,dj) to represent the earliest **execution start time** and the earliest **execution finish time** of operation oi on device dj , respectively. For the entry operation o_entry of the DAG, we have     入口开始时间为0
+
+EST(oentry,dj) = 0 for dj ∈ set of devices
 
 For other operations, EFT and EST can be computed starting from the entry operation as follows: dj就是device j,  oi就是operation i
 
@@ -140,7 +142,7 @@ Here, avail[j] is the earliest available time of device dj ;pred(oi) is the set 
 
 Our algorithm aims to minimize the overall actual execution time of operations on the computation graph’s critical path (based on their placement), which is the lower bound of the end-to-end execution time of the DAG (there could be gap time between operation executions). To compute the critical path, the entry operation is selected, and then we recursively select the operation with the largest rank among the successors. 就是递归选择后继.是不是时间长的先执行? 时间短的后执行? 不太对, rank大不代表时间长.rank代表的是从他这里开始，执行，一直执行到最后的sink节点，所需要花费的时间.它本身这个节点时间很短，他的rank也有可能很大.
 
-起始节点是这个图中唯一一个入度为零的节点.然后找这个起始节点相邻的所有的节点中，rank最大的.如果有多个入度为0的节点，你可以创建一个虚拟的节点，然后把这个虚拟节点指向所有其他入度为零的节点，然后这个起始节点就是entry
+起始节点是这个图中唯一一个入度为零的节点. 然后找这个起始节点相邻的所有的节点中，rank最大的.如果有多个入度为0的节点，你可以创建一个虚拟的节点，然后把这个虚拟节点指向所有其他入度为零的节点，然后这个起始节点就是entry
 
 ​	We consider operations in the DAG according to the order computed. If the operation is on the critical path, assign it to a **critical-path device**.这里讲了怎么选择关键路径设备,就是模拟然后计算一下 We choose a critical-path device as follows: for each available device, we simulate placing as many remaining operations on the critical path as possible onto the device (within its memory capacity), and compute the average execution time of the operations on the device using values from the computation cost model; we choose the device with the smallest average time as **a critical-path device**. If an operation is not on the critical path, we assign it to another device with sufficient memory which minimizes the EFT of the operation.因为关键路径是最费时的, 所以要用计算关键路径操作最快的设备,叫做critical-path device. During operation-device assignment, when a critical-path device’s memory **is full**, we find another critical-path device and assign as many critical-path operations to it as possible.直到这个设备满了的话找另一个critical-path device,然后assign 尽可能多的关键路径操作给它.  这一段很重要, 就是讲怎么计算device placement和执行顺序的.
 
@@ -150,26 +152,50 @@ Our algorithm aims to minimize the overall actual execution time of operations o
 # Algorithm 1 Device Placement and Operation Sequencing (DPOS) 
 1: Input: Graph G(O,E); Device Set D; Computation Cost Model Ccomp; Communication Cost Model Ccmmu;
 2: Output: New Device Placement Strategy Snew; Execution Order List A[]; Finish Time of Exit Operation FT(oexit).
-3: Set wi to be the max execution time ofoperation i andci, j to be the max communication time between operations i and j .
+3: Set wi to be the max execution time of operation i and ci,j to be the max communication time between operations i and j .
 4: Compute ranku, critical path SETCP. 
 5: Select a device set dCP to place operations in critical path based on average computation time and memory capacity.
 6: Create priority queue L for operations by decreasing order ofranku values.
-7: while L is not empty do 
+7: while L is not empty do    
 8:	oi ← L.dequeue()
-9:
-10: 11: 12: 13: 14: 15: 16: 17: 18: 19:
-20:
- if oi ∈ SETCP then
-Snew[oi ] = dCP(oi ) else for d in D do
-if memory need ofoi exceeds capacity ofd then EFT(oi ,d) ← +∞
-else Compute EFT(oi ,d) end if end for
-Snew[oi ] = arg min d∈D
-EFT(oi ,d) FT(oi ) = EST(oi , Snew[oi ])
-21: end if 22: end while 23: Compute Execution list A by sorting operations in ascending order ofST(oi )
-24: Compute FT(oexit)=EFT(oexit , Snew[oexit]) 25: Return: Snew, A, FT(oexit)
+9: if oi ∈ SETCP then
+10: Snew[oi ] = dCP(oi )# 
+11: else
+12:  for d in D do
+13: 	if memory need of oi exceeds capacity of d then
+14:  EFT(oi ,d) ← +∞  
+15: else  
+16: Compute EFT(oi ,d) 
+17:  end if   
+18:  end for 
+19:Snew[oi] = arg minEFT(oi ,d) d∈D
+20:FT(oi) = EST(oi,Snew[oi])
+21: end if 
+22: end while 
+23: Compute Execution list A by sorting operations in ascending order of ST(oi )
+24: Compute FT(oexit)=EFT(oexit,Snew[oexit]) 
+25: Return: Snew, A, FT(oexit)
 ```
 
-Lemma 引理1 There exists a chain X : oi_m → oi_m-1 → . . . → oi1 in O that covers B, if the memory capacity of devices is sufficient to host operations assigned. 如果有容量, 那么一定存在一个chainX可以coverB.That is, the total execution time plus maximal overall data transmission time along chain X is no less than the total duration of B:
+```python
+ ranku值降序创建优先级队列 L。
+while L is not empty do
+	oi <- L.dequeue() # 根据优先级逐一分配.
+    if oi in SETcp:
+        Snew[oi] = dcp(oi)# oi的策略就是用关键路径cp device
+    else:
+        for d in D: #D是device的set
+            if oi 进来后d的memory超出:
+                EFT(oi,d) =  +∞  
+            else:
+                compute EFT(oi,d)
+        Snew[oi] = min(EFT(oi,d)) #不同d中最小的eft
+        FT(oi) = EFT(oi,Snew[oi])
+计算Compute Execution list A by sorting operations in ascending order of ST(oi)
+Compute FT(oexit)=EFT(oexit,Snew[oexit]) 
+```
+
+Lemma 引理1 There exists a chain X : oi_m → oi_m-1 → . . . → oi1 in O that covers B, if the memory capacity of devices is sufficient to host operations assigned. 如果有容量, 那么一定存在一个chainX可以coverB. That is, the total execution time plus maximal overall data transmission time along chain X is no less than the total duration of B:
 
 Theorem 1 The end-to-end processing time of the DAG, ωDPOS , satisfies: ωDPOS ≤ 2ωopt + Cmax , where ωopt is the optimal DAG execution time in an ideal system without tensor transmission time, and Cmax is the maximal overall data transmission time along any chain in O. The detailed proofs are given in the Appendix. DAG 的端到端处理时间 ωDPOS 满足： ωDPOS ≤ 2ωopt + Cmax ，其中 ωopt  optimal是没有张量传输时间的理想系统中的最佳 DAG 执行时间，Cmax 是沿 O 中的任意链的最大总数据传输时间。详细的证明在附录中给出.
 
@@ -211,6 +237,29 @@ The algorithm first invokes Alg. 1 to compute **an initial device placement and 
 26: connect con to suc.
 27: end for 28: Remove operation op and edges connecting to it. 29:
 Return: Updated graph Gnew 30: end function
+```
+
+```python
+Input: Graph G(O, E); Device Set D; Computation Cost Model Ccomp; Communication Cost Model Ccmmu;
+Output: Operation Split List SP[]; New Device Placement Strategy S; Execution Order List A;
+for op in CP:
+    对于每个不同维度d和不同的GPUn, 调用DPOS(SplitOperation(Ginit,op,d,n),D,Ccomp,Ccmmu,S) 然后记录最短的FT(Oexit) and 对应的dimension d,  split n, Snew 和Anew(不知道是怎么split的)
+    if FT(oexit) < FTold(oexit):
+        Update: FTold(oexit) ← FTnew(nexit), Ginit = Gnew, S ← Snew, SP ← SP ∪ (op,d, n), A ←Anew 
+    else:
+        break
+return SP,S,A      
+function SplitOperation (Graph:G(O,E), Operation:op, Dimension:d, Split num:n)
+	for i in range(n):
+        创建子操作si
+    for pre in op的前继结点:
+        add a split node sp and connect it to the n partitions split from edge (pre, op) on dimension d:p1 p2 p3 (不懂 split node是什么)
+        connect pi to si
+    for operation suc in op的后继结点:
+        add a connect node
+    	connect con to suc
+    remove operation op and edges connecting to it .
+    return updated graph Gnew
 ```
 
 It is noteworthy that FastT may not use all the input devices, and can choose a subset which achieves better performance than using all. Strategy calculator in FastT carries out Alg. 1 to derive device placement and execution order of all (sub-)operations.
@@ -274,4 +323,13 @@ Table 6 compares model training performance when we enable operation split in Fa
 之前的缺点:  只考虑了计算图的模型并行, 黑盒学习时间久消耗计算资源多.
 
  **Device Placement for Deep Learning Models**. Researchers have been seeking the best placement strategy to assign operations in a DNN to different devices, to minimize execution time of the computation graph.  The Google team used reinforcement learning to tune a placement strategy [32]. Some follow-upwork propose more advanced algorithms to reduce learning time for deriving the policy [19, 21, 30], enlarge the solution space for better strategies [12, 26, 27, 44], optimize the reward function and sampling methods [18, 19, 33], or learn a more general model applicable to different computation graphs [10, 35, 36, 48]. For example, Placeto [10], GDP [48] and REGAL [35] use GNNs to generalize their models so that they can handle unseen computation graphs, and REGAL further considers the execution order of operations; however, these proposals only consider **model parallelism of computation graphs**, so the performance is limited. All the above studies treat the placement problem as a black box, and usually require hours of learning to obtain a satisfying policy, using large amounts of computing resource for policy training. Stanza [45] separates CONV layers and fully-connected layers into different workers to reduce communication overhead; it only optimizes these two types of layers.我们可以优化所有层 DLPlacer [34] studies hybrid data and model parallelism, but its device placement is based on a subgraph of the model rather than the entire graph.没有考虑全图.
+
+**Fine-grained parallelism within operations**. For neural networks such as a CNN, the fully connected layer is much larger than others; operations in that layer can be partitioned into several small sub-operations, and sub-operations can be assigned to different devices to reduce the execution time along the critical path. Alex [28] uses data parallelism for convolutional and pooling layers and switches to model parallelism for densely-connected layers to accelerate CNNs. TensorFlow mesh [38] provides high-level APIs for developers to specify parallelizable dimensions for different kinds of operations. They depend on developers to manually decide the parallelism strategy, which requires lots of experience. Tofu [44] utilizes a partition-n-reduce method to split a single operation into fine-grained operations, and a dynamic programming method to recursively optimize the partition. It does not consider device placement ofoperations. OptCNN [26] parallelizes CNN models by splitting operations along batch and channel dimensions; it does not consider parallelism across different operations.
+
+**Pipeline parallelism for DNN training.** Chen et al. [14] use a pipelining strategy to update models with delayed data and allow to compute different layers concurrently. Wu et al. [46] accelerate computation ofRNN on GPUs in the pipeline manner. PipeDream [22] introduces a pipeline approach to reduce communication overhead for synchronized training with the parameter server architecture [31]. GPipe [25] uses pipelines to address the memory bottleneck for large NNs. However, pipeline parallel training usually does not retain the exact semantics of the original model: multiple versions of parameters exist during training (similar to asynchronous training), which may lead to prolonged model convergence, or convergence to a different accuracy. FastT does not have this problem when used for strong scaling. On the other hand, these pipeline strategies can be complementary to FastT. After FastT obtains operation placement and execution order, it can further split a mini-batch into micro-batches and allow pipelined training in the similar fashion as proposed in Gpipe. FastT 在用于强缩放时没有这个问题。 另一方面，这些流水线策略可以作为 FastT 的补充。 在 FastT 获得操作放置和执行顺序后，它可以进一步将 mini-batch 拆分为 micro-batch，并允许以类似于 Gpipe 中提出的方式进行流水线训练。
+
+### 8 Concluding Discussions 
+
+This paper presents FastT, a transparent module on TensorFlow to automatically find satisfying operation splitting device deployment and execution order for DNN models running over multiple GPUs. We carefully design the system architecture and propose efficient heuristics with theoretical performance bound. FastT achieves up to 63.6% speed-up as compared with pure data parallelism, and outperforms representative approaches as well in terms of per-iteration training time, strategy computation time and resource consumption, or generality. It is applicable to different types of DNN models and requires no modification of the origin ML code for developers using TensorFlow. Looking forward, we have noticed that some new features
+have been published in TensorFlow which allow cycles in computation graphs, such as dynamic RNN layers. Currently, FastT does not handle graphs with cycles. 局限是不处理有环的图.A potential solution is to break the cycles and reorganize the graph to be a DAG. We leave this as future work. Further, we build most parts of the framework on TensorFlow’s Python Client API, so FastT currently supports developers who use Python to build their models. We will migrate our modules to TensorFlow kernel to support more APIs.
 
