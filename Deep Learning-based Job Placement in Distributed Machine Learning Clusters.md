@@ -1,10 +1,8 @@
 Deep Learning-based Job Placement in Distributed Machine Learning Clusters
 
-
-
 A 尝试解决什么问题
 
-1. co located ML job干扰导致性能下降,  mesos 集群调度没有考虑干扰.  详细的工作负载分析and 干扰建模处理.  harmony,  设计DRL框架, place job, 最小化干扰和训练时间. 
+1. co located ML job干扰导致性能下降,  mesos 集群调度没有考虑干扰.  详细的工作负载分析and 干扰建模处理.  harmony,  设计DRL 来place job, 最小化干扰和训练时间. 
 
 2. 增强了奖励模型.  采用了 actor-critic , job-aware action space exploration and experience replay.  
 
@@ -149,9 +147,11 @@ action space 不能过大, 否则训练时间长 而且效果差.
 
 1）Actor-critic：REINFORCE 算法可能会受到推导出的 Q 值的高方差（用于计算梯度），从而阻止策略模型的快速收敛 [25]。 为了减少方差，我们使用 actor-critic 算法改进了基本的策略梯度训练。 基本思想是引入依赖于状态的函数，以改进 SGD 中用于更新策略神经网络的梯度。 如果该动作的“质量”Qπθ(si,ai) 优于 si 中所有可能动作的“平均质量”，则我们reinforce an action . 我们evaluate how good an action is by its advantage  Q-V.   这样可以减少方差让policy learning more stable.
 
-2) 探索action space,  加入 an entropy reularization term 到 gradient calculation.  第二个是就是用omega-greedy.  omega的概率随机选择bin packing and load balancing . 1-omega 的概率用NN输出策略.  bin packing 是剩余容量最少,  load balancing是 负载最少. 让NN有效探索 resource utilization 和workload interference. 
+2) 探索action space,  加入 an entropy regularization term 到 gradient calculation.  第二个是就是用omega-greedy.  omega的概率随机选择bin packing and load balancing . 1-omega 的概率用NN输出策略.  bin packing 是剩余容量最少,  load balancing是 负载最少. 让NN有效探索 resource utilization 和workload interference. 
 
 3) experience replay
+
+uses  FIFO buffer to store samples from multiple past interval instead of last interval, it could reduce the correlation among the samples so that accelerate converge. 
 
 
 

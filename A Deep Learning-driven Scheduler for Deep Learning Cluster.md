@@ -18,6 +18,8 @@ B方法有哪些关键元素
 
 C我可以怎么自己用这方法
 
+
+
 D 哪些参考文献是值得follow 的
 
 
@@ -55,10 +57,10 @@ does not depend on expert heuristics and explicit modeling, resorting to a black
 
 ​	Existing DRL applications in resource scheduling scenarios  (§8) use simulators to generate training data for offline training, and apply trained models for resource scheduling in a live system. The core of such a simulator is typically an explicit performance model as mentioned above, and hence the inaccuracy of the simulator may lead to low-quality trained model. Instead of extensive offline training over large simulation, DL2 takes a different approach: we bootstrap the model using minimal offline supervised learning with any available historical job traces and decisions of any existing scheduling strategy employed in the cluster; then we use online training with feedback from ongoing decision making in a live system, with carefully designed techniques to guide model convergence to high-quality decisions, which minimize average job completion time in the cluster.
 
-​	现有资源调度场景中的现有 DRL 应用程序, 用模拟器生成用于离线训练的训练数据，并在实时系统中应用训练模型进行资源调度。 此类模拟器的核心通常是如上所述的显式性能模型，因此模拟器的不准确性可能会导致低质量的训练模型。 DL2 没有对大型模拟进行广泛的离线训练，而是采用了一种不同的方法：我们使用最小的离线监督学习引导模型，其中包含任何可用的历史作业跟踪和集群中采用的任何现有调度策略的决策； 然后我们使用在线训练和实时系统中正在进行的决策制定的反馈，使用精心设计的技术来引导模型收敛到高质量的决策，从而最大限度地减少集群中的平均工作完成时间。
+​	现有资源调度场景中的现有 DRL 应用程序, 用模拟器生成用于离线训练的训练数据，并在实时系统中应用训练模型进行资源调度。 此类模拟器的核心通常是如上所述的显式性能模型，因此模拟器的不准确性可能会导致低质量的训练模型。 DL2 没有对大型模拟进行广泛的离线训练，而是采用了一种不同的方法：我们使用最小的离线监督学习引导模型，其中包含任何可用的历史作业trace和集群中采用的任何现有调度策略的决策； 然后我们使用在线训练和实时系统中正在进行的决策制定的反馈，使用精心设计的技术来引导模型收敛到高质量的决策，从而最大限度地减少集群中的平均工作完成时间。
 
 ​	In summary, we make the following contributions in
-DL2:  In contrast to previous DL cluster scheduling approaches that require analytical performance model and job profiling, DL2 adopts a more generic design, i.e., using DRL to schedule DL workloads. Instead of simulation-driven RL model training, we adopt online training with real feedback from online resource allocation (§2).总之，我们在 DL 中做出了以下贡献： 与之前需要分析性能模型和作业分析的 DL 集群调度方法相比，DL 采用了更通用的设计，即使用 DRL 来调度 DL 工作负载。 我们采用online 资源分配的真实反馈的在线培训，而不是模拟驱动的 RL 模型培训（第 2 节）。
+DL2:  In contrast to previous DL cluster scheduling approaches that require analytical performance model and job profiling, DL2 adopts a more generic design, i.e., using DRL to schedule DL workloads. Instead of simulation-driven RL model training, we adopt online training with real feedback from online resource allocation (§2).我们在 DL 中做出了以下贡献： 与之前需要分析性能模型和作业分析的 DL 集群调度方法相比，DL 采用了更通用的设计，即使用 DRL 来调度 DL 工作负载。 我们采用online 资源分配的真实反馈的在线培训，而不是模拟驱动的 RL 模型培训（第 2 节）。
 
 ​	我们发现直接将简单的 RL 方法应用于我们的在线调度程序培训通常会导致错误的决策。 为了避免在线 RL 开始时的错误决策，我们在准备离线监督学习阶段应用 DL 集群中现有调度程序所做的过去决策。 我们的方法可以实现从现有调度程序的平滑过渡，并自动学习超越现有调度程序性能水平的更好调度程序（§3）。(这些是一些具体的方法,  不算key idea. 可以记下这个论文的主干, 然后再来论文中找他的具体实现. ) 为了优化在线 RL，特别是针对 DL 作业调度，我们提出了作业感知探索以在动作空间中进行有效探索，并采用额外的训练技术（例如，演员评论算法、经验回放）进行样本高效学习（第 4 节）。我们在流行的分布式 ML 框架 MXNet [20] 中设计和实现弹性扩展，以实现动态worker/PS调整（§5) 
 
@@ -121,7 +123,7 @@ Our DL-based scheduler, DL2, adopts joint offline and online learning of a polic
 
 For warm-up, we use supervised learning to train the policy NN, to initialize a policy whose performance is as good as the existing scheduler in the DL cluster. A small set of historical job runtime traces collected from the cluster are used for supervised learning, to allow the NN to produce similar decisions as made by the existing scheduler. This step is a must due to the poor performance of applying online RL directly (see Fig. 10).3.2 DL2 调度器我们基于 DL 的调度器 DL2 采用策略神经网络 (NN) 的联合离线和在线学习，为集群中的并发作业做出资源分配决策。 图 5 给出了 DL2 的概述。
 
-离线监督学习。  warm up 使用监督学习来训练策略神经网络，以初始化一个策略，其性能与 DL 集群中现有的调度程序一样好。 从集群中收集的一小组 runtime trace用于监督学习，以允许 NN 生成与现有调度程序所做的类似决策。 由于直接应用在线 RL 的性能不佳， this step is a must
+离线监督学习。  warm up 使用监督学习来训练策略神经网络，以初始化一个策略，其性能与 DL 集群中现有的调度程序一样好。 从集群中收集的一小组 runtime trace用于监督学习，以允许 NN 生成与现有调度程序所做的类似决策。 由于直接应用在线 RL 的性能不佳， this step is a must.
 
 #### Online reinforcement learning. 
 
