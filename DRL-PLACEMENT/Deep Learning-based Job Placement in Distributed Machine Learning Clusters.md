@@ -28,7 +28,7 @@ B方法有哪些关键元素
 
 许多调度器如 borg , mesos 给job分配更多CPU和内存, server少一些.    但是因为jobs 共享底层资源,  CPU caches, disk  IO ,  network IO and buses QPI,PCIe.  比如   GPU 分配给不同的ML  , job shuffle data between CPU和GPU时就share PCIe bus .    在NUMA 中, 两个分配的GPU没连到同一个CPU就要共享QPI.  
 
-一些ML  CTC 读取图像预处理, 就是CPU 密集型,  一些AlexNET是磁盘IO 密集型,  一些网络带宽消耗大因为模型尺寸大(参数数量多) minibatch 小(worker之间参数交换多) 如VGG 16
+一些ML 模型  CTC 读取图像预处理, 就是CPU 密集型,  一些AlexNET是磁盘IO 密集型,  一些网络带宽消耗大因为模型尺寸大(参数数量多) minibatch 小(worker之间参数交换多) 如VGG 16
 
 我们需要把低干扰的job放一起, 但是yarn , mesos是不考虑的.  一些文章 建立了干扰模型, 手动启发式把干扰纳入调度, 但是几十个干扰源, 需要仔细优化参数或者阈值, 而且不通用, workload type 或者硬件配置变了就不好用了. 
 

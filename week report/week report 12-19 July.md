@@ -68,3 +68,19 @@ Summary
 | input  | job type,time has run, remaining epoch, allocated resources, # of workers/PS | all operation(grouper)  group embedding(placer) | job type,resource demand, # of workers/PS ,available resources on the servers, placement of existing workers and PSs |
 | output | allocation one worker/PS of new arrival job                  | placing one group on server.                    | action: placing one worker/PS of new arrival job n on server m |
 
+
+
+21晚meeting
+
+我的想法: 
+
+因为层次, 单个模型,  没有考虑colocated,  分组 , group op
+
+DL2 有resource allocation 没有placement. 
+
+harmony , 有placement , 没有resource allocation,NN reward 预测. 
+
+下一次一定要做个ppt ,展示自己很短. 
+
+这周做了啥. 
+
