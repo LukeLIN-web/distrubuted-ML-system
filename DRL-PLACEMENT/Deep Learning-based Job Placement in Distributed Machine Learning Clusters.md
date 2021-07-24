@@ -77,7 +77,7 @@ All 3 schemes are not good enough to achieve high resource utilization and train
 
 2. 没有这么多traces 覆盖所有possible placement.  样本不够就 不能 训练DRL NN 收敛到一个好的policy.
 
- 解决方法:  为了训练我们的 DRL 模型，我们需要一种方法来 为 DRL 生成的placement decisions  提供 synthetic(合成)reward samples . 这个placement decisions是历史 ML 集群trace中不存在的。 我们不依赖分析干扰模型 [11] [12]，而是采用更通用的方法，使用**另一个 NN 进行奖励建模，使用可用trace通过监督学习进行训练。**
+ 解决方法:  为了训练我们的 DRL 模型，我们需要一种方法来为 DRL 生成的placement decisions  提供 synthetic(合成)reward samples . 这个placement decisions是历史 ML 集群trace中不存在的。 我们不依赖分析干扰模型 [11] [12]，而是采用更通用的方法，使用**另一个 NN 进行奖励建模，使用可用trace通过监督学习进行训练。**
 
  奖励建模 监督学习. 
 
@@ -115,9 +115,9 @@ DRL 模型训练,  为新job 生成place决策
 
 输入: job type,resource demand, # of workers/PS ,available resources on the servers, placement of workers and PSs 
 
-x  每个job的类型. 
+x  每个job的类型.  N是job的数量,  L是job的类型数量也就是model的数量.  
 
-r  jobs中worker/ PS的 resource demands. 
+r  jobs中worker/ PS的 resource demands.   
 
 w 分配给 job的worker数量
 

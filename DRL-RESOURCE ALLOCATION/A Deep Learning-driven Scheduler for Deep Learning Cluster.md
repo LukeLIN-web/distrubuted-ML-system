@@ -28,7 +28,7 @@ D 哪些参考文献是值得follow 的
 
    有效的资源调度对于最大限度地利用昂贵的 DL 集群至关重要。 现有的集群调度器要么对 ML 工作负载特征不可知，要么使用基于操作员对特定 ML 框架和工作负载的理解的调度启发式，这些方法效率较低或不够通用。 在本文中，我们展示了可以采用 DL 技术来设计通用且高效的调度程序。
 
-​	 DL2 是 DL 集群的 DL 驱动调度程序，通过动态调整分配allocate给job的资源大小来针对global 训练作业 expedition。 DL2 提倡联合监督学习(应该就是线上和线下)和强化学习方法：基于现有集群调度器产生的作业trace，通过离线监督学习对神经网络进行预热； 然后将神经网络插入(代码上是怎么plug 的?  )实时 DL 集群，通过在 DL 作业的整个训练过程中进行的强化学习进行微调(我们的改进就是能不能placement 也用强化学习)，并用于以在线方式决定作业资源分配。 通过在准备监督学习阶段应用现有集群调度器做出的过去决策，我们的方法可以实现从现有调度器的平滑过渡，并在最小化平均训练完成时间方面提供高质量的调度器。 我们在 Kubernetes 上实施 DL2，并在 MXNet 上的 DL 作业中启用动态资源扩展。 广泛的评估表明，DL2 在平均作业完成时间方面优于公平调度程序（即 DRF）44.1% 和专家启发式调度程序（即 Optimus）17.5%。
+​	 DL2 是 DL 集群的 DL 驱动调度程序，通过动态调整分配allocate给job的资源大小来针对global 训练作业 expedition。 DL2 提倡联合监督学习(应该就是线上和线下)和强化学习方法：基于现有集群调度器产生的作业trace，通过离线监督学习对神经网络进行预热； 然后将神经网络插入(代码上是怎么plug 的?  )实时 DL 集群，通过在 DL 作业的整个训练过程中进行的强化学习进行微调(我们的改进就是能不能placement 也用强化学习)，并用于以在线方式决定作业资源分配。 通过在准备监督学习阶段应用现有集群调度器做出的过去决策，我们的方法可以实现从现有调度器的平滑过渡，并在最小化平均训练完成时间方面提供高质量的调度器。 我们在 Kubernetes 上实施 DL2，并在 MXNet 上的 DL 作业中启用动态资源扩展。 广泛的评估表明，DL2 在平均作业完成时间方面优于公平调度程序（即 DRF）44.1% 和专家启发式调度程序（即 Optimus）17.5%
 
 ## 1 介绍
 
@@ -36,9 +36,9 @@ D 哪些参考文献是值得follow 的
 
 ​	另一种是白盒,  第一步workload建模, 第二步  提出调度启发式函数进行 resource allocation.  缺点是三点: 
 
-1. 需要深入了解 ML 框架和workload,
-2.  模型和框架coupled,
-3.  通常不考虑多租户集群的干扰 .(怎么干扰的? )
+1. 需要深入了解 ML 框架和workload
+2.  模型和框架coupled
+3.  通常不考虑多租户集群的干扰 (怎么干扰的? )
 
 ​	 In the second camp, recent studies have proposed white-box heuristics for resource allocation in ML clusters. Typically they tackle the problem in two steps: set up analytical models for DL/ML workloads, and propose scheduling heuristics accordingly for online resource allocation and adjustment. Designing heuristics requires a deep understanding of ML frameworks and workloads, and the analytical model is tightly coupled with the ML framework implementation (e.g., a new feature or optimization in evolving ML frameworks may invalidate the analytical model) [49]. Further, the modeling typically does not consider interference in a multi-tenant cluster (§2.2)
 
@@ -98,37 +98,37 @@ resort to a black-box approach and design an RL-based resource scheduler: it aut
 
 ### 2.3 Deep Reinforcement Learning
 
-​	观察状态,  根据策略选择动作,  move到新的状态, 显示reward, 根据reward 更新策略.  DRL has been widely used for sequential decision making in an unknown environment, where the agent learns a policy to optimize a cumulative reward by trial-and-error interactions with the environment . In each iteration, the agent observes the current state of the environment and then chooses an action based on the current policy. The environment moves to a new state and reveals the reward, and the policy is updated based on the received reward.
+​	观察状态,  根据策略选择动作,  move到新的状态, 显示reward, 根据reward 更新策略.  DRL has been widely used for sequential decision making in an unknown environment, where the agent learns a policy to optimize a cumulative reward by trial-and-error interactions with the environment. In each iteration, the agent observes the current state of the environment and then chooses an action based on the current policy. The environment moves to a new state and reveals the reward, and the policy is updated based on the received reward.
 
 ​	   现在offline显性建模调度器生成trace 来训练DRL模型,  但是1 因为 ML 框架改了就要remodeling,  2 因为 性能模型没有考虑干扰就不准确,   用历史轨迹 缺点是: 没有所有可能的决策因为决策空间很大.    
 
 ​	Therefore, instead of offline training in a simulated environment, we advocate online RL in the live cluster, exploiting true feedback for resource allocation decisions produced by the DRL agent, to learn a good policy over time. Pure online learning of the policy network model from scratch can result in poor policies at the beginning of learning (see Fig. 10). To avoid poor initial decisions and for the smooth transition from an existing scheduler, we adopt offline supervised learning to bootstrap the DRL policy with the existing scheduling strategy.
 
-我们提出  一开始离线监督学习因为 一开始纯online RL 收敛很慢,  而且现在的调度器可以继续用在offline.然后  在online, 给DRL agent 产生的 resource allocation policy true feedback , 让他学习策略.
+​	我们提出  一开始离线监督学习因为 一开始纯online RL 收敛很慢,  而且现在的调度器可以继续用在offline.然后  在online, 给DRL agent 产生的 resource allocation policy true feedback , 让他学习策略.
 
-## 3DL
+## 3DL overview
 
-DL2 的最终目标是在实时DL 集群中找到最佳资源分配策略，并最小化所有并发作业的平均作业完成时间。
+​	DL2 的最终目标是在实时DL 集群中找到最佳资源分配策略，并最小化所有并发作业的平均作业完成时间。
 
 ### 3.1 DL 集群
 
-​	在具有多个 GPU 服务器的 DL 集群中，随着时间的推移提交 DL 训练作业。 每个作业都运行一个分布式 ML 框架（例如我们的实验中的 MXNet），以通过重复训练其数据集来学习特定的 DL 模型。 提交作业后，用户，即作业所有者，提供她/他分别运行每个工人和每个 PS 的资源需求，以及要运行的训练时期总数。 例如，一个worker至少 1 个 GPU 和一个 PS 需要许多 CPU 内核。 可以基于专家知识或工作经历来估计实现模型收敛的总训练epoch数（例如，模型的损失或准确性的收敛)
+​	在具有多个 GPU 服务器的 DL 集群中，随着时间的推移提交 job。 每个job都运行一个分布式 ML 框架（例如我们的实验中的 MXNet），重复训练数据集来learning特定的 DL 模型。 提交作业后，job owner，提供她/他分别运行每个工人和每个 PS 的资源需求，以及要运行的训练时期总数。 例如，一个worker至少 1 个 GPU 和一个 PS 需要许多 CPU 内核。 可以基于专家知识或工作经历来估计实现模型收敛的总训练epoch数（例如，模型的损失或准确性的收敛)
 
 ​	根据资源可用性和训练速度，每个作业可能会从一个时间段到另一个时间段运行不同数量的worker和 PS（由调度程序决定）对于同步训练，为了保证相同的训练结果（模型）同时改变工人的数量，我们调整每个工人的mini batch大小，以便用户指定的作业中的总batch大小仍然保持不变  对于异步训练，每个工人的小批量大小保持不变，而工人数量不同（因为全局批量大小等于每个工人的批量大小）
 
 ### 3.2 DL Scheduler
 
-Our DL-based scheduler, DL2, adopts joint offline and online learning of a policy neural network (NN) for making resource allocation decisions to concurrent jobs in the cluster. An overview of DL2 is given in Fig. 5. 
+​	Our DL-based scheduler, DL2, adopts joint offline and online learning of a policy neural network (NN) for making resource allocation decisions to concurrent jobs in the cluster. An overview of DL2 is given in Fig. 5. 
 
 #### Offline supervised learning. 
 
-For warm-up, we use supervised learning to train the policy NN, to initialize a policy whose performance is as good as the existing scheduler in the DL cluster. A small set of historical job runtime traces collected from the cluster are used for supervised learning, to allow the NN to produce similar decisions as made by the existing scheduler. This step is a must due to the poor performance of applying online RL directly (see Fig. 10).3.2 DL2 调度器我们基于 DL 的调度器 DL2 采用策略神经网络 (NN) 的联合离线和在线学习，为集群中的并发作业做出资源分配决策。 图 5 给出了 DL2 的概述。
+For warm-up, we use supervised learning to train the policy NN, to initialize a policy whose performance is as good as the existing scheduler in the DL cluster. A small set of historical job runtime traces collected from the cluster are used for supervised learning, to allow the NN to produce similar decisions as made by the existing scheduler. This step is a must due to the poor performance of applying online RL directly (see Fig. 10)   DL2 采用策略神经网络 (NN) 的联合离线和在线学习，为集群中的并发作业做出资源分配决策。 图 5 给出了 DL2 的概述。
 
 离线监督学习。  warm up 使用监督学习来训练策略神经网络，以初始化一个策略，其性能与 DL 集群中现有的调度程序一样好。 从集群中收集的一小组 runtime trace用于监督学习，以允许 NN 生成与现有调度程序所做的类似决策。 由于直接应用在线 RL 的性能不佳， this step is a must.
 
 #### Online reinforcement learning. 
 
-Online RL works in a time-slotted fashion; each time slot is a scheduling interval, e.g., 1 hour. At the beginning of a scheduling interval, the policy NN takes the information of all the concurrent jobs as input state, and produces the numbers of workers and PSs for each job. The concurrent jobs include new jobs arrived in the previous time slot (after previous scheduling) and jobs which were submitted earlier and whose training has not been completed yet. Workers and PSs are placed on physical machines following the placement policy in the cluster, such as load balancing . Jobs’ training progress is observed at the end of each time slot, and used as the reward to improve the policy network
+Online RL works in a time-slotted fashion; each time slot is a scheduling interval, e.g., 1 hour. At the beginning of a scheduling interval, the policy NN takes the information of all the concurrent jobs as input state, and produces the numbers of workers and PSs for each job. The concurrent jobs include new jobs arrived in the previous time slot (after previous scheduling) and jobs which were submitted earlier and whose training has not been completed yet. Workers and PSs are placed on physical machines following the placement policy in the cluster, such as load balancing . Jobs’ training progress is observed at the end of each time slot, and used as the reward to improve the policy network.
 
 比如一个小时调度一次 
 
@@ -136,13 +136,15 @@ Online RL works in a time-slotted fashion; each time slot is a scheduling interv
 
 输入: 所有并发的job信息
 
-输出:  每个job的 PS和worker数
+输出:  每个job的 PS和worker数.
 
-reward:  job的训练进度. training progress                                
+reward:  job的训练进度. training progress.                       
 
 ## 4 detailed design
 
 ### 4.1 Policy Neural Network
+
+为什么要用这些参数? 不告诉你d行不行? 
 
 State. The input state to the policy NN is a matrix 
 
@@ -152,27 +154,29 @@ State. The input state to the policy NN is a matrix
 
 - d 表示  一个 J 维向量，编码每个作业在集群中运行的time slot数，用于所有作业。 例如，di 是作业 i 运行的time slot数。
 
-- e 一个 J 维向量，编码为每个作业训练的剩余 epoch 数。  ei 是用户指定的总训练时期数之间的差值
+- e 一个 J 维向量，编码为每个作业训练的剩余 epoch 数。ei 是用户指定的总训练时期数之间的差值.
 
 - r一个 J 维向量, 表示分配给每个job的主导资源量, 例如，ri 是分配给作业 i 的主导资源量（与集群中资源的总容量相比，作业占用的资源最多） 这个很可能理解有误, 可以到时候问一问. 
 
 - w和u 它们中的每一个都是一个 J 维向量，其中第 i 项是当前时隙中分配给作业 i 的工人 (PS) 的数量。 
 
-  状态不同组件中并发作业的信息根据作业的到达时间进行排序。 输入状态不直接包括集群中可用的资源容量； 我们的调度程序可以处理集群中随时间变化的整体资源容量。
+根据作业的到达时间进行排序。 输入状态不直接包括集群中可用的资源容量； 我们的调度程序可以处理集群中随时间变化的整体资源容量。(因为是一个个放置, 直到用完为止.)
+
+  这个state 一次是放多少? 是放这么大一个矩阵, 所以行数 = job的+5,列数= job的类型  
 
 **action** 输出包括  3 × J + 1 个动作
 
  NN 产生策略 π : π(a | s; θ) → [0, 1]，这是动作空间上的概率分布。  a 代表一个动作，θ 是神经网络中的当前参数集。 一个简单的设计是允许每个动作指定分配给所有并发作业的工人/PS 的数量； 这导致了一个指数级大的动作空间，包含所有可能的工人/PS 编号组合。 大的action space会导致大量的训练成本和缓慢的收敛
 
-  为了加快神经网络的学习，我们简化了动作定义，并允许神经网络通过每个推理从以下 3 × J + 1 个动作中输出一个动作：(i) (i, 0)，意味着分配一个工人到工作 i, (ii) (i, 1), 为作业 i 分配一个 PS, (iii) (i, 2), 为作业 i 分配一个工人和一个 PS, (iv) 一个无效动作，表示当前时隙停止分配资源（因为分配更多资源不一定会导致更高的训练速度)由于每个推理只输出要分配给 J 个作业之一的增量资源，因此我们允许对 NN 进行多次推理，以在每个时隙中生成完整的资源分配决策集：在生成一个动作后，我们更新状态 s， 然后使用神经网络产生另一个动作； 重复推理直到资源被使用完 或产生无效动作。  
+  为了加快神经网络的学习，我们简化了动作定义，并允许神经网络通过每个推理从以下 3 × J + 1 个动作中输出一个动作：(i) (i, 0)，意味着分配一个工人到工作 i, (ii) (i, 1), 为作业 i 分配一个 PS, (iii) (i, 2), 为作业 i 分配一个工人和一个 PS, (iv) 一个无效动作，表示当前时隙停止分配资源（因为分配更多资源不一定会导致更高的训练速度)由于每个推理只输出要分配给 J 个作业之一的增量资源，因此我们允许对 NN 进行多次推理，以在每个时隙中生成完整的资源分配决策集( 这个是说需要一个timeslot的时间生成吗?)：在生成一个动作后，我们更新状态 s， 然后使用神经网络产生另一个动作； 重复推理直到资源被使用完或产生无效动作。  
 
-  虽然我们在每个时间段内为每个作业重新生成工人/PS ，但对于在前一个时间段内运行的作业，我们比较新的和以前的数量并执行动态缩放以仅调整部署数量（§5  ）。
+  虽然我们在每个时间段内为每个作业重新生成工人/PS ，但对于在前一个时间段内运行的作业，我们比较新的和以前的数量并执行动态缩放以仅调整部署数量（§5  ）
 
-  **神经网络NN架构**。 输入状态矩阵 s 连接到一个全连接层，使用 ReLU [48] 函数进行激活。 这一层的神经元数量与状态矩阵的大小成正比。 该层的输出聚合在一个隐藏的全连接层中，然后连接到最终的输出层。 最后的输出层使用 softmax 函数 [25] 作为激活函数。  NN 架构是基于经验训练试验empirical training trials设计的。
+  **神经网络NN架构**。 输入状态矩阵 s 连接到一个全连接层，使用 ReLU [48] 函数进行激活。 这一层的神经元数量与状态矩阵的大小成正比。 该层的输出聚合在一个隐藏的全连接层中，然后连接到最终的输出层。 最后的输出层使用 softmax 函数 [25] 作为激活函数。  NN 架构是基于经验训练试验empirical training trials设计的(作者也不知道为啥反正可以work)
 
 ### 4.2 Offline Supervised Learning
 
-​	In offline supervised learning, we use stochastic gradient descent (SGD) [56] to update parameters θ of the policy NN to minimize a loss function, which is the cross entropy of the resource allocation decisions made by the NN and decisions of the existing scheduler in the traces [38]. The NN is repeatedly trained using the trace data, e.g., hundreds of times as in our experiments, such that the policy produced by the NN converges to the policy of the existing scheduler
+​	In offline supervised learning, we use stochastic gradient descent (SGD) [56] to update parameters θ of the policy NN to minimize a loss function, which is the cross entropy of the resource allocation decisions made by the NN and decisions of the existing scheduler in the traces [38]. The NN is repeatedly trained using the trace data, e.g., hundreds of times as in our experiments, such that the policy produced by the NN converges to the policy of the existing scheduler.
 
 ​	用随机梯度下降 SGD 来更新参数,  就是NN资源分配决策和目前scheduler trace决策的交叉熵. 训练几百次.收敛到现有调度器的决策.
 
@@ -182,27 +186,33 @@ State. The input state to the policy NN is a matrix
 
   reward ,  每个job的rt加起来. rt = 这个timeslot训练的epoch/总共要训练的epoch 
 
-​	基本原理是作业在一个时间段内运行的 epoch 越多，完成所需的时间段就越少，因此最大化累积奖励相当于最小化平均作业完成时间。 规范化是为了防止偏向大型工作。
+​	基本原理是job一个时间段内运行的 epoch 越多，完成所需的时间段就越少，因此最大化累积奖励相当于最小化平均作业完成时间。 规范化是为了防止偏向大型工作。
 
-​	**基于策略梯度的学习。** 在在线强化学习中，通过离线监督学习获得的策略神经网络使用 REINFORCE 算法 [62] 进一步训练，以最大化预期累积折扣reward  我们将问题建模为具有长期影响的非线性问题，而不是具有一轮独立反馈的传统线性模型，例如上下文老虎机 [36]，因为不同时隙中的动作是相关的。  REINFORCE 算法通过对 E[ 求和∞ t=0 −γtrt] 执行 SGD 来更新策略网络的参数 θ。 梯度为：
+怎么更新NN ? 
+
+用 累计reward求导.
+
+​	**基于策略梯度的学习。** 在在线强化学习中，通过离线监督学习获得的策略神经网络使用 REINFORCE 算法 [62] 进一步训练，以最大化预期累积折扣reward  我们将问题建模为具有长期影响的非线性问题，而不是具有一轮独立反馈的传统线性模型，例如上下文老虎机 [36]，因为不同时隙中的动作是相关的。  REINFORCE 算法通过对 E[ 求和∞ t=0 −γtrt] 执行 SGD 来更新策略网络的参数 θ。
 
 ​    梯度可以先计算 Q,  Q= 选择action a后的预期 cumulative discounted reward.  Q 根据 minibatch 样本来计算.
 
-   notice  与标准 RL 的运行方式不同：我们在每个时隙 t 中使用 NN 进行多次推理（即产生多个动作）； 每次推理后 input state 都会发生变化； 我们只在时间段中的所有推理完成后观察reward 并更新 NN 一次。 我们可以在一个时隙 t 中获取多个sample，并将每个样本中的奖励设置为在 t 中完成所有推理后观察到的奖励（1）。 
+   notice  与标准 RL 的运行方式不同：我们在每个时隙 t 中使用 NN 进行多次推理（即产生多个动作）； 每次推理后 input state 都会发生变化； 我们只在时间段中的所有推理完成后观察reward 并更新 NN 一次。 我们可以在一个时隙 t 中获取多个sample，并将每个样本中的奖励设置为在 t 中完成所有推理后观察到的奖励（1） 
+
+(其实稳定是之后的事情, 最重要的是先搞出RL 的框架)
 
   我们进一步采用了多种技术来稳定在线 RL，加速策略收敛，并提高所获得策略的质量。 
 
-**actor-critic** 我们使用 actor-critic 算法 [46]（如图 6 所示）改进了基于梯度的基本策略强化学习，以加快策略网络的收敛速度。 基本思想是 让Q减去一个函数 Q(a, s; θ) − Vπ(s, θ)，其中 Vπ(s, θ) 是一个价值函数,  表示期待的reward   (这个不太懂 )representing the expected reward over the actions drawn using policy π(a | s; θ) at all times starting from time slot t. 
+**actor-critic** 我们使用 actor-critic 算法 [46]（如图 6 所示）改进了基于梯度的基本策略强化学习，以加快策略网络的收敛速度。 基本思想是 让Q减去一个函数 Q(a, s; θ) − Vπ(s, θ)，其中 Vπ(s, θ) 是一个价值函数,  表示期待的reward   (这个不太懂 )representing the expected reward over the actions drawn using policy π(a | s; θ) at all times starting from time slot. 
 
 这可以显示特定行动的优劣.(为什么?)
 
    还确保梯度的方差小得多，从而使policy学习更加稳定。 价值函数由价值网络评估， 网络结构和policy NN 相同，只是其最终输出层是一个没有任何激活函数的线性神经元[46]，并产生价值函数 Vπ(s,  θ)。 输入状态也和策略网络相同。 我们使用temporal  difference 方法[46]训练价值网络。 这里具体的实现要看 46号文献
 
-​	**job-aware探索**。 为了通过 RL 获得好的策略，我们需要确保充分探索行动空间（即可以充分产生导致良好回报的行动）； 否则，RL 可能会收敛到较差的局部最优策略 [60] [46]。 我们首先采用一种常用的熵entropy探索方法，通过在梯度计算中添加熵正则化项 来更新策略网络[46]。  这样策略网络的参数 θ 朝着更高熵的方向更新（意味着探索更多的动作空间）
+​	**job-aware探索**。 为了通过 RL 获得好的策略，我们需要确保充分探索行动空间（即可以充分产生导致良好回报的行动）； 否则，RL 可能会收敛到较差的局部最优策略 [60] [46]。 我们首先采用一种常用的熵entropy探索方法，通过在梯度计算中添加熵正则化项 来更新策略网络[46]。  这样策略网络的参数 θ 朝着更高熵的方向更新（意味着探索更多的动作空间）
 
 ​	在训练期间，由于不了解工作语义，我们观察到大量不必要的或糟糕的探索（例如，为工作分配多个工人但 0 PS）。 为了提高探索效率，我们采用了另一种基于omega-greedy 方法的技术[55]。 在使用策略网络的每次推理中，我们检查输入状态：如果输入状态属于我们已经识别的不良状态之一.  那么 概率为 1 − omega应用策略网络产生的资源分配决策， omega概率，我们丢弃来自策略网络的输出，采用指定的动作并观察该动作的奖励。
 
-   差输入状态集包括三种情况：（i）存在一个要调度的作业，该作业已分配给多个工人但没有 PS；  (ii) 存在一份工作分配了多个 PS 但没有工人；  (iii) 存在一项工作，其分配的工人 (w) 和 PSs (u) 的分配数量差异太大，即 w/u > 阈值或 u/w > 阈值（在我们的实验中阈值为 10）。 我们对这些输入状态中的每一个手动指定的操作是：（i）为该作业分配一个 PS；  (ii) 为该工作再分配一名工人；  (iii) 为该工作再分配一名 PS 或一名工人，使其工人/PS 数量更加均衡。
+   差输入状态集包括三种情况：（i）存在一个要调度的作业，该作业已分配给多个工人但没有 PS；  (ii) 存在一份工作分配了多个 PS 但没有工人；  (iii) 存在一项工作，其分配的工人 (w) 和 PSs (u) 的分配数量差异太大，即 w/u > 阈值或 u/w > 阈值（在我们的实验中阈值为 10） 我们对这些输入状态中的每一个手动指定的操作是：（i）为该作业分配一个 PS；  (ii) 为该工作再分配一名工人；  (iii) 为该工作再分配一名 PS 或一名工人，使其工人/PS 数量更加均衡。
 	**experience replay**。 众所周知，样本之间的相关性会阻止 actor-critic 模型收敛到一个好的策略 [55]。 在我们的在线 RL 中，当前的策略网络确定了以下训练样本，例如，如果策略网络发现分配更多的工人可以提高奖励，那么以下样本序列将由该策略产生的样本序列主导； 这可能会导致糟糕的反馈循环，从而阻止对具有更高奖励的样本进行探索。 
 
   为了减轻观察到的样本序列中的相关性，我们在 actor-critic 框架中采用了经验回放 [47]。 具体来说，我们维护一个重放缓冲区来存储在最新时隙中收集的样本。 在每个时间段的末尾，我们选择一个小批量的样本，而不是使用在这个时间段收集的所有样本samples from the replay buffer to compute the gradient updates, where the samples could be from multiple previous time slots.
