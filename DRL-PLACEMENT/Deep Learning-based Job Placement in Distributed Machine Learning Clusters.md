@@ -6,7 +6,7 @@ A 尝试解决什么问题
 
 2. 增强了奖励模型.  采用了 actor-critic , job-aware action space exploration and experience replay.  
 
-3. 缺乏不同place 决策的奖励样本, 构建了一个辅助奖励预测模型,  历史样本训练 .
+3. **如何才能高效并行的产生海量的数据供神经网络进行学习是大规模深度强化学习的关键。**缺乏不同place 决策的奖励样本, 构建了一个辅助奖励预测模型,  历史样本训练value NN  . 然后valueNN 产生reward 让policyNN 可以不需要online也可以不断强化.
 
 B方法有哪些关键元素
 
@@ -15,6 +15,16 @@ B方法有哪些关键元素
 1. 对于加速, 之前研究设备数量调整. 我们fix 资源, 研究了 DRL 优化job placement.  
 2. 干扰他们都建模然后分析. 我们利用历史data trace 来训练 NN without loss of generality.
 3. **DRL**  他们都假设有足够数据, 用simulation model 产生训练样本或者online 测量.  我们 不建模, 用reward prediciton NN来产生 训练样本.  
+
+C 有什么我可以用的
+
+policy NN应该可以用.
+
+那么reward 可以用吗?  
+
+
+
+
 
 ## Abstract
 
@@ -75,11 +85,11 @@ All 3 schemes are not good enough to achieve high resource utilization and train
 
 1. action and state space 指数增长,   insufficient or ineffective exploration 导致**收敛到良好的决策策略 ** 困难
 
-2. 没有这么多traces 覆盖所有possible placement.  样本不够就 不能 训练DRL NN 收敛到一个好的policy.
+2. 没有这么多traces 覆盖所有possible placement.  样本不够就不能训练DRL NN收敛到一个好的policy.  
 
  解决方法:  为了训练我们的 DRL 模型，我们需要一种方法来为 DRL 生成的placement decisions  提供 synthetic(合成)reward samples . 这个placement decisions是历史 ML 集群trace中不存在的。 我们不依赖分析干扰模型 [11] [12]，而是采用更通用的方法，使用**另一个 NN 进行奖励建模，使用可用trace通过监督学习进行训练。**
 
- 奖励建模 监督学习. 
+ 奖励建模 监督学习.  所以就是自己训练自己, 自己生成奖励. 因为之前的placement和reward是远远不够的. 
 
 输入: historical trace ,是有标签的. 
 
@@ -91,7 +101,7 @@ All 3 schemes are not good enough to achieve high resource utilization and train
 
  job owner 要提交什么? 
 
-1. 每个worker和PS需要的资源
+1. 每个worker和PS需要的资源. 
 2. PS 和worker总数
 3. 总epoch数. 
 
@@ -101,9 +111,9 @@ harmony batches(批处理) interval中**新到达的**job, 然后决定他们的
 
 离线分为两步,
 
- 奖励模型训练,  监督学习训练 奖励预测NN,为place 决定了的数据提供奖励评估
+ 1  监督学习训练 奖励预测NN,为place 决定了的数据提供奖励评估. label是每个job的reward也就是训练速度. 输入是job 信息和placement.
 
-DRL 模型训练,  为新job 生成place决策
+2 DRL 模型训练,  为新job 生成place决策
 
 在线推断:
 
@@ -115,15 +125,17 @@ DRL 模型训练,  为新job 生成place决策
 
 输入: job type,resource demand, # of workers/PS ,available resources on the servers, placement of workers and PSs 
 
-x  每个job的类型.  N是job的数量,  L是job的类型数量也就是model的数量.  
+x  每个job的类型.  N是job的数量,  L是job的类型数量也就是model的数量.  这个和DL2输入一样
 
 r  jobs中worker/ PS的 resource demands.   
 
-w 分配给 job的worker数量
+worker数量, K个资源类型.  比如K =2 , worker3个, PS 2个[  3,1,2,2,0,1 ]  3表示worker的数量,   (  DL2只有worker的输出, 没有resource demand比如CPU,GPU的输出, 在哪里有相关文献? ) 一般 CPU是固定的, 不需要输出. 是job owner提交的
 
-v 每个服务器上 每种资源的数量
+w 和p分配给 job的worker/PS数量.  这个DL2输出可以获得
 
-d 每个服务器上 运行了哪些job的哪些PS. 这个是之前的
+v 每个服务器上 每种资源的数量. 这个可以直接获得.available  resource
+
+d M x2N ,服务器m上 运行了哪些job的哪些PS. 也就是当前的job   placement情况. 这个是existing. 比如sever m hosts 1 PS and 1 worker of job 2 and 1 PS and 2 workers of job 5 among 6 jobs; we have dm = [0, 0, 1, 1, 0, 0, 0, 0, 2, 1, 0, 0]. (•是不是就是目前存在的job的运行情况, 不包括新提交的job? 如果是, 那就可以直接获得, 感觉应该是, 要不然还placement干嘛都place好了)
 
 **action space**  接收到s, 根据策略 pi 选择动作a, 策略是概率分布, 由NN生成,  
 
@@ -133,11 +145,11 @@ action space 不能过大, 否则训练时间长 而且效果差.
 
 我们action space  2MN'  个actions, N' 表示新到达的jobs数. (n, 0, m )  放一个  n 的worker 到server m上 , (n, 1, m )  放一个  n 的PS 到server m上.
 
-  一个interval 中可以多次inferences推理, 一次选要给action, 提出 完整的placement. 或者没有resource时停止. 这可以reduce action space. 
+  一个interval 中可以多次inferences推理, 一次选一个action, until 提出 完整的placement. 或者没有resource时停止. 这可以reduce action space. 
 
 **reward** 
 
-我们设计了每个间隔的reward,  这一段和 DL2好像是完全一样的
+我们设计了每个间隔的reward,  这一段和 DL2好像是完全一样的.
 
 **NN** 
 
@@ -156,8 +168,6 @@ action space 不能过大, 否则训练时间长 而且效果差.
 3) experience replay
 
 uses  FIFO buffer to store samples from multiple past interval instead of last interval, it could reduce the correlation among the samples so that accelerate converge. 
-
-
 
 ## V reward 预测model
 

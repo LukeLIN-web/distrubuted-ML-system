@@ -20,7 +20,7 @@ C我可以怎么自己用这方法
 
 
 
-D 哪些参考文献是值得follow 的
+D 哪些参考文献是值得follow的
 
 
 
@@ -59,7 +59,7 @@ does not depend on expert heuristics and explicit modeling, resorting to a black
 
 ​	现有资源调度场景中的现有 DRL 应用程序, 用模拟器生成用于离线训练的训练数据，并在实时系统中应用训练模型进行资源调度。 此类模拟器的核心通常是如上所述的显式性能模型，因此模拟器的不准确性可能会导致低质量的训练模型。 DL2 没有对大型模拟进行广泛的离线训练，而是采用了一种不同的方法：我们使用最小的离线监督学习引导模型，其中包含任何可用的历史作业trace和集群中采用的任何现有调度策略的决策； 然后我们使用在线训练和实时系统中正在进行的决策制定的反馈，使用精心设计的技术来引导模型收敛到高质量的决策，从而最大限度地减少集群中的平均工作完成时间。
 
-​	In summary, we make the following contributions inDL2:  
+​	In summary, we make the following contributions in DL2:  
 
 ​	In contrast to previous DL cluster scheduling approaches that require analytical performance model and job profiling, DL2 adopts a more generic design, i.e., using DRL to schedule DL workloads. Instead of simulation-driven RL model training, we adopt online training with real feedback from online resource allocation (§2).我们在 DL 中做出了以下贡献： 与之前需要分析性能模型和作业分析的 DL 集群调度方法相比，DL 采用了更通用的设计，即使用 DRL 来调度 DL 工作负载。 我们采用online 资源分配的真实反馈的在线培训，而不是模拟驱动的 RL 模型培训（第 2 节）。
 
@@ -79,9 +79,7 @@ does not depend on expert heuristics and explicit modeling, resorting to a black
 2. 不同模型 设备数是不同的,不能默认配置.
 3. 静态分配导致 资源空闲, 需要动态调整.
 4. 白盒和ML 框架couple, 改了就要remodeling,另外也考虑多租户干扰很复杂.
-5. 
-
-   The typical workflow for a user to train a model in a DL cluster is as follows: The user specifies how many PSs and workers she/he wishes to use and the amount of resources (e.g., GPU, CPU) each PS/worker needs, and then submits the job to the scheduler (e.g., Borg [59], YARN [58], Mesos [31]). The scheduler allocates PSs and workers to the job according to both user demand and its scheduling strategy, and the allocated resources then remain fixed over the entire training course of the job. This workflow has two limitations, as illustrated below. 
+5. The typical workflow for a user to train a model in a DL cluster is as follows: The user specifies how many PSs and workers she/he wishes to use and the amount of resources (e.g., GPU, CPU) each PS/worker needs, and then submits the job to the scheduler (e.g., Borg [59], YARN [58], Mesos [31]). The scheduler allocates PSs and workers to the job according to both user demand and its scheduling strategy, and the allocated resources then remain fixed over the entire training course of the job. This workflow has two limitations, as illustrated below. 
 
 **Difficulty in setting the right worker/PS numbers.**  有更多的PS和work的时候, 训练速度如何提高?  How does a job’s training speed improve when more PSs and workers are added to the job? We train 3 classical models, i.e., ResNet-50 [30], VGG-16 [53] and Seq2Seq [23], in our testbed of 6 machines (see §6 for hardware details), and measure their training speeds (in terms of the number of samples trained per unit time), when increasing the number of workers and keeping the number of PSs equal to the worker number. Each worker uses 1 GPU, 4 CPU cores, 10GB memory and each PS has 4 CPU cores, 10GB memory. In Fig. 1, the speedup is calculated by dividing the training speed achieved using multiple workers/PSs (they are deployed onto physical machines in a load-balanced fashion) by the training speed obtained using one worker and one PS colocated on a single machine. We observe a trend of decreasing return, i.e., adding PSs/workers does not improve the training speed linearly. This is because more communication overhead is incurred when there are more PSs or workers. 因为有更多的通信开销.
 
@@ -144,11 +142,11 @@ reward:  job的训练进度. training progress.
 
 ### 4.1 Policy Neural Network
 
-为什么要用这些参数? 不告诉你d行不行? 
+为什么要用这些参数? 不告诉你d行不行? 这些信息我认为是容易获得的, 而且有助于做出优秀决策的输入.
 
 State. The input state to the policy NN is a matrix 
 
-输入包括 job type,  job has run的时间,  remaining epochs , allocated resources, allocated workers, allocated PSs.
+输入包括 job type,  job has run的时间,  remaining epochs , allocated resources, allocated workers, allocated PSs.https://q.uiver.app/?q=WzAsOCxbMywxLCJwb2xpY3lOTiJdLFs1LDEsImFsbG9jYXRlXFxcXHdvcmtlci9QUyJdLFswLDAsImpvYlxcXFx0eXBlIl0sWzAsMSwicnVudGltZSJdLFswLDIsInJlbWFpbmluZ1xcXFxlcG9jaCJdLFswLDMsImRvbWFpbnQgcmVzb3VyY2UiXSxbMCw0LCJqb2Inc1xcXFx3b3JrZXIiXSxbMCw1LCJqb2Inc1xcXFxQUyJdLFswLDFdLFsyLDBdLFs3LDBdXQ==
 
 - x 表示在作业中训练的 DL 模型JxL的矩阵，其中 J 是我们正在调度的时间段中并发作业的最大数量的上限，L 是集群中任何时候训练作业类型的最大数量。 我们将 DL 作业训练类似的 DNN 架构视为我们输入中的相同类型。 例如，基于相同的预训练模型的微调作业很常见，它们可以被视为同一类型。
 
@@ -156,7 +154,7 @@ State. The input state to the policy NN is a matrix
 
 - e 一个 J 维向量，编码为每个作业训练的剩余 epoch 数。ei 是用户指定的总训练时期数之间的差值.
 
-- r一个 J 维向量, 表示分配给每个job的主导资源量, 例如，ri 是分配给作业 i 的主导资源量（与集群中资源的总容量相比，作业占用的资源最多） 这个很可能理解有误, 可以到时候问一问. 
+- r一个 J 维向量, 表示分配给每个job的主导资源, 例如，ri 是分配给作业 i 的主导资源（与集群中资源的总容量相比，作业占用的资源最多） 这个就是类型. 比如CPU , GPU .  每个worker的单位资源是固定的, 不是job owner提交的,  在论文中 一开始确定下来简化问题. 
 
 - w和u 它们中的每一个都是一个 J 维向量，其中第 i 项是当前时隙中分配给作业 i 的工人 (PS) 的数量。 
 

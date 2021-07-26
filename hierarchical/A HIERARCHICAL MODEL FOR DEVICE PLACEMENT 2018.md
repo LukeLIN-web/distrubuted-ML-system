@@ -1,41 +1,7 @@
 A HIERARCHICAL MODEL FOR DEVICE PLACEMENT 2018
 
-```latex
-% https://q.uiver.app/?q=WzAsMjYsWzEsNywib3AxIl0sWzMsNywib3AyIl0sWzUsNywib3AzIl0sWzMsNiwiZW1iZWRkaW5nMiJdLFszLDksImNvbXB1dGluZ1xcXFxncmFwaCJdLFsxLDYsImVtYmVkZGluZzEiXSxbNSw2LCJlbWJlZGRpbmczIl0sWzYsNywib3AuLi4iXSxbMCw2LCJvcFxccXVhZCBlbWJlZGRpbmciXSxbMSw1LCJncm91cFxccXVhZCBpZCJdLFszLDUsImdyb3VwXFxxdWFkIGlkIl0sWzUsNSwiZ3JvdXBcXHF1YWQgaWQiXSxbMCwzLCJncm91cFxccXVhZCBlbWJlZGRpbmciXSxbMCwyLCJoaWRkZW5cXHF1YWQgc3RhdGUiXSxbMSwzLCJnMSJdLFszLDMsImcyIl0sWzQsMywiZzMiXSxbMSwyLCLlj6MiXSxbMywyLCLlj6MiXSxbNCwyLCLlj6MiXSxbNSwyLCLlj6MiXSxbNSwwLCJkZXZpY2VcXHF1YWQgZm9yXFxcXGdyb3VwMSJdLFswLDEsImF0dGVudGlvbiJdLFswLDAsInNvZnRtYXgiXSxbNiwyLCLlj6MiXSxbNiwwLCJkZXZpY2VcXHF1YWQgZm9yXFxcXGdyb3VwMiJdLFsxLDNdLFs0LDFdLFs0LDBdLFs0LDJdLFswLDVdLFsyLDZdLFs0LDddLFs1LDldLFszLDEwXSxbNiwxMV0sWzEwLDE0LCIiLDEseyJsZXZlbCI6Mn1dLFs5LDE1LCIiLDAseyJsZXZlbCI6Mn1dLFsxMSwxNiwiIiwwLHsibGV2ZWwiOjJ9XSxbMTQsMTddLFsxNywxOF0sWzE1LDE4XSxbMTgsMTldLFsxNiwxOV0sWzE5LDIwXSxbMjAsMjFdLFsyNCwyNV0sWzIwLDI0XV0=
-\[\begin{tikzcd}
-	softmax &&&&& {device\quad for\\group1} & {device\quad for\\group2} \\
-	attention \\
-	{hidden\quad state} & {口} && {口} & {口} & {口} & {口} \\
-	{group\quad embedding} & g1 && g2 & g3 \\
-	\\
-	& {group\quad id} && {group\quad id} && {group\quad id} \\
-	{op\quad embedding} & embedding1 && embedding2 && embedding3 \\
-	& op1 && op2 && op3 & {op...} \\
-	\\
-	&&& computing\\graph
-	\arrow[from=8-4, to=7-4]
-	\arrow[from=10-4, to=8-4]
-	\arrow[from=10-4, to=8-2]
-	\arrow[from=10-4, to=8-6]
-	\arrow[from=8-2, to=7-2]
-	\arrow[from=8-6, to=7-6]
-	\arrow[from=10-4, to=8-7]
-	\arrow[from=7-2, to=6-2]
-	\arrow[from=7-4, to=6-4]
-	\arrow[from=7-6, to=6-6]
-	\arrow[Rightarrow, from=6-4, to=4-2]
-	\arrow[Rightarrow, from=6-2, to=4-4]
-	\arrow[Rightarrow, from=6-6, to=4-5]
-	\arrow[from=4-2, to=3-2]
-	\arrow[from=3-2, to=3-4]
-	\arrow[from=4-4, to=3-4]
-	\arrow[from=3-4, to=3-5]
-	\arrow[from=4-5, to=3-5]
-	\arrow[from=3-5, to=3-6]
-	\arrow[from=3-6, to=1-6]
-	\arrow[from=3-7, to=1-7]
-	\arrow[from=3-6, to=3-7]
-\end{tikzcd}\]
+```http
+https://q.uiver.app/?q=WzAsMjYsWzEsNywib3AxIl0sWzMsNywib3AyIl0sWzUsNywib3AzIl0sWzMsNiwiZW1iZWRkaW5nMiJdLFszLDksImNvbXB1dGluZ1xcXFxncmFwaCJdLFsxLDYsImVtYmVkZGluZzEiXSxbNSw2LCJlbWJlZGRpbmczIl0sWzYsNywib3AuLi4iXSxbMCw2LCJvcFxccXVhZCBlbWJlZGRpbmciXSxbMSw1LCJncm91cFxccXVhZCBpZCJdLFszLDUsImdyb3VwXFxxdWFkIGlkIl0sWzUsNSwiZ3JvdXBcXHF1YWQgaWQiXSxbMCwzLCJncm91cFxccXVhZCBlbWJlZGRpbmciXSxbMCwyLCJoaWRkZW5cXHF1YWQgc3RhdGUiXSxbMSwzLCJnMSJdLFszLDMsImcyIl0sWzQsMywiZzMiXSxbMSwyLCLlj6MiXSxbMywyLCLlj6MiXSxbNCwyLCLlj6MiXSxbNSwyLCLlj6MiXSxbNSwwLCJkZXZpY2VcXHF1YWQgZm9yXFxcXGdyb3VwMSJdLFswLDEsImF0dGVudGlvbiJdLFswLDAsInNvZnRtYXgiXSxbNiwyLCLlj6MiXSxbNiwwLCJkZXZpY2VcXHF1YWQgZm9yXFxcXGdyb3VwMiJdLFsxLDNdLFs0LDFdLFs0LDBdLFs0LDJdLFswLDVdLFsyLDZdLFs0LDddLFs1LDldLFszLDEwXSxbNiwxMV0sWzEwLDE0LCIiLDEseyJsZXZlbCI6Mn1dLFs5LDE1LCIiLDAseyJsZXZlbCI6Mn1dLFsxMSwxNiwiIiwwLHsibGV2ZWwiOjJ9XSxbMTQsMTddLFsxNywxOF0sWzE1LDE4XSxbMTgsMTldLFsxNiwxOV0sWzE5LDIwXSxbMjAsMjFdLFsyNCwyNV0sWzIwLDI0XV0=
 ```
 
 解决了什么问题?
@@ -53,10 +19,7 @@ A HIERARCHICAL MODEL FOR DEVICE PLACEMENT 2018
 它的问题:
 
 1. 只能一个模型产生了op然后优化, 是非常局限的. 不能多个模型一起placement
-
-
-
-
+2.  一层FNN 一层LSTM
 
 摘要
 
@@ -148,7 +111,7 @@ placer的softmax输出大小= 可用硬件设备数
 
 ### 训练细节:
 
-用Adam 优化器训练, 固定学习率为0.1
+用Adam 优化器(优点:  更新方向考虑了历史梯度,  对step 长度利用累加的梯度平方值进行修正 ,  信息累加按照指数形式衰减)训练, 固定学习率为0.1
 
 为了鼓励探索, 前500个policy 训练step中加入了 整体分布的noise. 
 
@@ -172,11 +135,11 @@ colocRL 假设操作必须colocated,  我们的粒度可以很细, 高度并行,
 
 ### 运行开销
 
-对于每个模型,我们训练一个新的策略. (好像是不同的模型都要重新训练?  )
+对于每个模型,我们训练一个新的策略. (不同的模型都要重新训练,这是缺点  )
 
 计算reward , 运行目标模型5个step, 使用median 运行时间. 
 
-简单起见, 先训练 层次规划器planner, 然后 训练目标模型. 为了提高效率，我们可以使用实际训练步骤的运行时间作为奖励，将层次规划器的训练与目标模型的训练交织在一起。
+简单起见, 先训练 层次规划器planner, 然后 训练目标模型. 为了提高效率，我们可以使用实际训练步骤的运行时间作为奖励，将层次规划器的训练与目标模型的训练交织在一起。(就是说顺便也训练一下目标模型.)
 
 ### Alternative Policy Architectures:
 
