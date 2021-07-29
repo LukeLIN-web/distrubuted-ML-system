@@ -1,8 +1,18 @@
 Deep Learning-based Job Placement in Distributed Machine Learning Clusters
 
+
+
+harmony 为什么用DRL 不用LSTM? 有什么区别? 
+
+ You can try LSTM. I tried it but the performance is not good enough. For Google's paper, I tried that before but did not get how they built a dynamic NN. 就是dynamic RNN.
+
+
+
+> 作者的话: We read the source code of Pensive (https://github.com/hongzimao/pensieve) and DeepRM (https://github.com/hongzimao/deeprm) as reference during our implementation. The integration with Kubernetes API is similar to Optimus (https://github.com/pengyanghua/optimus). If you have any concrete questions about the implementation details, feel free to ask us.
+
 A 尝试解决什么问题
 
-1. co located ML job干扰导致性能下降,  mesos 集群调度没有考虑干扰.  详细的工作负载分析and 干扰建模处理.  harmony,  设计DRL 来place job, 最小化干扰和训练时间. 
+1. co located ML job干扰导致性能下降,  Mesos 集群调度没有考虑干扰.  详细的工作负载分析and 干扰建模处理.  harmony,  设计DRL 来place job, 最小化干扰和训练时间. 
 
 2. 增强了奖励模型.  采用了 actor-critic , job-aware action space exploration and experience replay.  
 
@@ -131,11 +141,13 @@ r  jobs中worker/ PS的 resource demands.
 
 worker数量, K个资源类型.  比如K =2 , worker3个, PS 2个[  3,1,2,2,0,1 ]  3表示worker的数量,   (  DL2只有worker的输出, 没有resource demand比如CPU,GPU的输出, 在哪里有相关文献? ) 一般 CPU是固定的, 不需要输出. 是job owner提交的
 
-w 和p分配给 job的worker/PS数量.  这个DL2输出可以获得
+w 和p分配给 job的worker/PS数量.  这个DL2输出可以获得 . 这个 •For r and w(p), I tried several combinations and chose the one with the best performance.
 
-v 每个服务器上 每种资源的数量. 这个可以直接获得.available  resource
+v 每个服务器上 每种资源的数量. 这个可以直接获得.available  resource 
 
-d M x2N ,服务器m上 运行了哪些job的哪些PS. 也就是当前的job   placement情况. 这个是existing. 比如sever m hosts 1 PS and 1 worker of job 2 and 1 PS and 2 workers of job 5 among 6 jobs; we have dm = [0, 0, 1, 1, 0, 0, 0, 0, 2, 1, 0, 0]. (•是不是就是目前存在的job的运行情况, 不包括新提交的job? 如果是, 那就可以直接获得, 感觉应该是, 要不然还placement干嘛都place好了)
+d M x2N ,服务器m上 运行了哪些job的哪些PS. 也就是当前的job   placement情况. 这个是existing. 比如sever m hosts 1 PS and 1 worker of job 2 and 1 PS and 2 workers of job 5 among 6 jobs; we have dm = [0, 0, 1, 1, 0, 0, 0, 0, 2, 1, 0, 0]. (•是不是就是目前存在的job的运行情况, 不包括新提交的job? 如果是, 那就可以直接获得, 感觉应该是, 要不然还placement干嘛都place好了) 学姐说是
+
+•d includes all concurrent jobs.
 
 **action space**  接收到s, 根据策略 pi 选择动作a, 策略是概率分布, 由NN生成,  
 

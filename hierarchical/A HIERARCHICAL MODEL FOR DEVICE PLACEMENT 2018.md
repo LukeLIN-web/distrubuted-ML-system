@@ -1,5 +1,11 @@
 A HIERARCHICAL MODEL FOR DEVICE PLACEMENT 2018
 
+前身是Device Placement Optimization with Reinforcement Learning, 这篇文章拓展成了hierarchy. 加了group.
+
+加了group好处是什么?
+
+可以自动分组. 减少operation, 避免梯度爆炸.  我们的设计应不会有, 因为我们allocation不会过大, 还是一样的大小.
+
 ```http
 https://q.uiver.app/?q=WzAsMjYsWzEsNywib3AxIl0sWzMsNywib3AyIl0sWzUsNywib3AzIl0sWzMsNiwiZW1iZWRkaW5nMiJdLFszLDksImNvbXB1dGluZ1xcXFxncmFwaCJdLFsxLDYsImVtYmVkZGluZzEiXSxbNSw2LCJlbWJlZGRpbmczIl0sWzYsNywib3AuLi4iXSxbMCw2LCJvcFxccXVhZCBlbWJlZGRpbmciXSxbMSw1LCJncm91cFxccXVhZCBpZCJdLFszLDUsImdyb3VwXFxxdWFkIGlkIl0sWzUsNSwiZ3JvdXBcXHF1YWQgaWQiXSxbMCwzLCJncm91cFxccXVhZCBlbWJlZGRpbmciXSxbMCwyLCJoaWRkZW5cXHF1YWQgc3RhdGUiXSxbMSwzLCJnMSJdLFszLDMsImcyIl0sWzQsMywiZzMiXSxbMSwyLCLlj6MiXSxbMywyLCLlj6MiXSxbNCwyLCLlj6MiXSxbNSwyLCLlj6MiXSxbNSwwLCJkZXZpY2VcXHF1YWQgZm9yXFxcXGdyb3VwMSJdLFswLDEsImF0dGVudGlvbiJdLFswLDAsInNvZnRtYXgiXSxbNiwyLCLlj6MiXSxbNiwwLCJkZXZpY2VcXHF1YWQgZm9yXFxcXGdyb3VwMiJdLFsxLDNdLFs0LDFdLFs0LDBdLFs0LDJdLFswLDVdLFsyLDZdLFs0LDddLFs1LDldLFszLDEwXSxbNiwxMV0sWzEwLDE0LCIiLDEseyJsZXZlbCI6Mn1dLFs5LDE1LCIiLDAseyJsZXZlbCI6Mn1dLFsxMSwxNiwiIiwwLHsibGV2ZWwiOjJ9XSxbMTQsMTddLFsxNywxOF0sWzE1LDE4XSxbMTgsMTldLFsxNiwxOV0sWzE5LDIwXSxbMjAsMjFdLFsyNCwyNV0sWzIwLDI0XV0=
 ```
@@ -69,7 +75,7 @@ placer的 RNN encoder 每次读一个group embedding,  产生M 个hidden state, 
 
 ### RL学习训练
 
-  planner 优化一个目标模型的训练时间比如一个tf 图(所以它必须要有专门的模型?  不能分配job, 不能多个模型同时训练? 我觉得不行  ), 根据grouper和placer的决策. 预测设备放置的每个训练步骤d , 把d的reward定义为  Rd = -sqrt(r) planner应让Rd的期望值最大化,  
+  planner 优化一个目标模型的训练时间比如一个tf 图(所以它必须要有专门的模型?  不能分配job, 不能多个模型同时训练? 我觉得不行  ), 根据grouper和placer的决策. 预测设备放置的每个训练步骤d , 把d的reward定义为  Rd = -sqrt(r) planner应让Rd的期望值最大化
 
 我们需要优化cost function
 
@@ -77,7 +83,7 @@ placer的 RNN encoder 每次读一个group embedding,  产生M 个hidden state, 
 
 ### 分布式训练 
 
-我们的框架有一个在多个控制器之间共享的PS, 所有控制器用同一组参数, 异步更新policy. 一个控制器和k个工作结点通信. 一个worker只和一个控制器交互.
+我们的框架有一个在多个控制器之间共享的PS, 所有控制器用同一组参数, 异步更新policy. 一个控制器和k个工作结点通信. 一个worker只和一个控制器交互. (图可以看2017年的文章)
 
 每个worker 执行控制器给定的placement 并报告. 所有worker都placement好了 , 控制器就会计算梯度. 
 
