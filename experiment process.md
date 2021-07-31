@@ -18,3 +18,9 @@
 2. 然后卸载了安装 tf1.13.1 , 显示**This page isn’t working right now** **e0844decf715** didn’t send any data.
 3. There are not any runs in the log folder.
 
+
+
+完成了优化器, checkpoint. 企图分离agent.
+
+为什么训练过程这么长, over 150 LOC.
+

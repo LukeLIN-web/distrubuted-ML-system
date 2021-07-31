@@ -1,4 +1,4 @@
-# TensorFlow
+## TensorFlow
 
 机器学习主要分为训练和部署两个步骤。
 
@@ -7,10 +7,6 @@
 在部署阶段，TensorFlow模型可以跑在不同的平台，支持服务器端部署的TensorFlow Serving， 支持Android，iOS和嵌入式设备等端侧平台部署的TensorFlow Lite，支持浏览器和Node 服务器部署的TensorFlow.js，以及包括C语言，Java 语言，Go语言，C#语言，Rust和R等多种语言。
 
 使用Keras高层API。Keras 是一个用于构建和训练深度学习模型的高阶 API，可用于快速设计原型、研究和生产环境使用。它具有易使用，模块化，可组合以及易于扩展等优点。Keras 是 TensorFlow 2.0 主要推荐的 API。
-
-算法是机器学习的核心，重要性无需多言。
-
-需要提醒的是，tensorflow对通用的算法的封装已经很完善，我们并不需要了解算法实现很细的细节，更加不需要自己去实现各种通用的算法，大部分情况下，只要了解通用算法的原理，然后简单调用API，完成我们自己的业务算法即可。例如常见的算法：
 
 tf.sigmoid:  sigmoid算法实现
 
@@ -51,7 +47,7 @@ tf.nn.max_pool：池化层
 
 玩过深度学习的可能还会有一个类似的概念：激活函数，激活函数不是tensorflow必须的，而只有在使用神经网络算法的时候要用到，例如上述函数求解就不会用到激活函数，但算法和损失函数是必须的。
 
-
+### variable_scope
 
 `with tf.variable_scope(*self*.scope):`
 
@@ -62,6 +58,7 @@ tf.nn.max_pool：池化层
 		with tf.variable_scope(self.scope):
 			total_parameters = 0
 			for variable in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope):
+                # 在创建图的过程中，TensorFlow的Python底层会自动用一些collection对op进行归类，方便之后的调用。这部分collection的名字被称为tf.GraphKeys，可以用来获取不同类型的op
 				shape = variable.get_shape()
 				variable_parameters = 1
 				for dim in shape:
@@ -71,3 +68,22 @@ tf.nn.max_pool：池化层
 ```
 
 torch也可以输出模型的参数
+
+```python
+	for name,param in policy_net.named_parameters():
+		logger.info(f"name: {name}, param: {param}")
+```
+
+
+
+### placeholder()
+
+ Tensorflow的设计理念称之为计算流图，在编写程序时，首先构筑整个系统的graph，代码并不会直接生效，这一点和python的其他数值计算库（如Numpy等）不同，graph为静态的，类似于docker中的镜像。然后，在实际的运行时，启动一个session，程序才会真正的运行。这样做的好处就是：避免反复地切换底层程序实际运行的上下文，tensorflow帮你优化整个系统的代码。我们知道，很多python程序的底层为C语言或者其他语言，执行一行脚本，就要切换一次，是有成本的，tensorflow通过计算流图的方式，帮你优化整个session需要执行的代码，还是很有优势的。
+
+所以placeholder()函数是在神经网络构建graph的时候在模型中的占位，此时并没有把要输入的数据传入模型，它只会分配必要的内存。等建立session，在会话中，运行模型的时候通过feed_dict()函数向占位符喂入数据。
+
+#### tf.train.XXXOptimizer
+
+`apply_gradients`和`compute_gradients`是所有的优化器都有的方法。
+
+ \#执行对应变量的更新梯度操作 training_op = optimizer.apply_gradients(capped_gvs)
