@@ -51,3 +51,23 @@ tf.nn.max_pool：池化层
 
 玩过深度学习的可能还会有一个类似的概念：激活函数，激活函数不是tensorflow必须的，而只有在使用神经网络算法的时候要用到，例如上述函数求解就不会用到激活函数，但算法和损失函数是必须的。
 
+
+
+`with tf.variable_scope(*self*.scope):`
+
+获得参数数量. 
+
+```python
+	def get_num_weights(self):
+		with tf.variable_scope(self.scope):
+			total_parameters = 0
+			for variable in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.scope):
+				shape = variable.get_shape()
+				variable_parameters = 1
+				for dim in shape:
+					variable_parameters *= dim.value
+				total_parameters += variable_parameters
+			return total_parameters
+```
+
+torch也可以输出模型的参数
