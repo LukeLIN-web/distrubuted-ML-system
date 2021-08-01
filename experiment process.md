@@ -1,12 +1,12 @@
 实验过程
 
-打算做一些实验.
-
 没有GPU: 可以申请, 用colab. 让学长帮我申请了GPU.
 
 尝试DQN 问题1 : colab没有显示器.
 
 尝试一个DRL 可以, 它也是用策略梯度
+
+ImportError: libcublas.so.10.0: cannot open shared object file: No such file or directory
 
 方法1:  我把代码抄一遍用pytorch复现一遍.
 
