@@ -1,7 +1,5 @@
 Deep Learning-based Job Placement in Distributed Machine Learning Clusters
 
-
-
 harmony 为什么用DRL 不用LSTM? 有什么区别? 
 
  You can try LSTM. I tried it but the performance is not good enough. For Google's paper, I tried that before but did not get how they built a dynamic NN. 就是dynamic RNN.
@@ -30,7 +28,7 @@ C 有什么我可以用的
 
 policy NN应该可以用.
 
-那么reward 可以用吗?  
+那么reward 可以用吗?  可以用。 
 
 
 
@@ -46,7 +44,7 @@ policy NN应该可以用.
 
   worker和PS, 怎么高效place到服务器上? 
 
-许多调度器如 borg , mesos 给job分配更多CPU和内存, server少一些.    但是因为jobs 共享底层资源,  CPU caches, disk  IO ,  network IO and buses QPI,PCIe.  比如   GPU 分配给不同的ML  , job shuffle data between CPU和GPU时就share PCIe bus .    在NUMA 中, 两个分配的GPU没连到同一个CPU就要共享QPI.  
+许多调度器如 borg , mesos 给job分配更多CPU和内存, server少一些.    但是因为jobs 共享底层资源,  CPU caches, disk  IO ,  network IO and buses QPI,PCIe.  比如   GPU 分配给不同的ML  , job shuffle data between CPU和GPU时就share PCIe bus .    在NUMA 中, 两个分配的GPU没连到同一个CPU就要共享QPI（CPU到内存更快，）.  
 
 一些ML 模型  CTC 读取图像预处理, 就是CPU 密集型,  一些AlexNET是磁盘IO 密集型,  一些网络带宽消耗大因为模型尺寸大(参数数量多) minibatch 小(worker之间参数交换多) 如VGG 16
 
@@ -107,7 +105,13 @@ All 3 schemes are not good enough to achieve high resource utilization and train
 
 ## 三.系统overview
 
-我们专注于使用参数服务器架构的分布式 ML 作业； 我们的设计可以很容易地扩展到使用 all-reduce 类型的算法在工作人员之间进行直接参数交换来处理工作 。
+DRL训练什么？  训练NN参数。 选择通过reward model 获得虚拟trace。 重复了怎么办？ 重复了没关系， 继续强化这个action。
+
+online 训练什么 ？线上实际推断， 做出的placement和reward作为历史trace ，给reward model 监督学习。 
+
+SL 训练什么？ 历史trace输入， NN调整参数， 拟合 历史输入和输出的关系。
+
+我们专注于使用参数服务器PS架构的分布式 ML 作业； 我们的设计可以很容易地扩展到使用 all-reduce 类型的算法在worker之间进行直接参数交换来处理工作 。
 
  job owner 要提交什么? 
 
@@ -125,8 +129,6 @@ harmony batches(批处理) interval中**新到达的**job, 然后决定他们的
 
 2 DRL 模型训练,  为新job 生成place决策
 
-在线推断:
-
 ## IV. DEEP REINFORCEMENT LEARNING BASED PLACEMENT POLICY
 
 ### A DRL framework
@@ -143,7 +145,7 @@ worker数量, K个资源类型.  比如K =2 , worker3个, PS 2个[  3,1,2,2,0,1 
 
 w 和p分配给 job的worker/PS数量.  这个DL2输出可以获得 . 这个 •For r and w(p), I tried several combinations and chose the one with the best performance.
 
-v 每个服务器上 每种资源的数量. 这个可以直接获得.available  resource 
+v 每个服务器上 每种资源的数量. 这个可以直接获得available  resource 
 
 d M x2N ,服务器m上 运行了哪些job的哪些PS. 也就是当前的job   placement情况. 这个是existing. 比如sever m hosts 1 PS and 1 worker of job 2 and 1 PS and 2 workers of job 5 among 6 jobs; we have dm = [0, 0, 1, 1, 0, 0, 0, 0, 2, 1, 0, 0]. (•是不是就是目前存在的job的运行情况, 不包括新提交的job? 如果是, 那就可以直接获得, 感觉应该是, 要不然还placement干嘛都place好了) 学姐说是
 
@@ -167,6 +169,8 @@ action space 不能过大, 否则训练时间长 而且效果差.
 
 主要看看图7 ,  要mask invalid actions 也就是资源不够的action, 然后rescale调整概率和为1.  
 
+
+
 ### B DRL Model Training
 
 和DL2也差不多. 
@@ -175,7 +179,7 @@ action space 不能过大, 否则训练时间长 而且效果差.
 
 1）Actor-critic：REINFORCE 算法可能会受到推导出的 Q 值的高方差（用于计算梯度），从而阻止策略模型的快速收敛 [25]。 为了减少方差，我们使用 actor-critic 算法改进了基本的策略梯度训练。 基本思想是引入依赖于状态的函数，以改进 SGD 中用于更新策略神经网络的梯度。 如果该动作的“质量”Qπθ(si,ai) 优于 si 中所有可能动作的“平均质量”，则我们reinforce an action . 我们evaluate how good an action is by its advantage  Q-V.   这样可以减少方差让policy learning more stable.
 
-2) 探索action space,  加入 an entropy regularization term 到 gradient calculation.  第二个是就是用omega-greedy.  omega的概率随机选择bin packing and load balancing . 1-omega 的概率用NN输出策略.  bin packing 是剩余容量最少,  load balancing是 负载最少. 让NN有效探索 resource utilization 和workload interference. 
+2) 探索action space,  加入交叉熵正则化 an entropy regularization term 到 gradient calculation.  第二个是就是用omega-greedy.  omega的概率随机选择bin packing and load balancing . 1-omega 的概率用NN输出策略.  bin packing 是剩余容量最少,  load balancing是 负载最少. 让NN有效探索 resource utilization 和workload interference. 
 
 3) experience replay
 

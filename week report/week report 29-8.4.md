@@ -38,3 +38,4 @@ I have read the introduction of k8s.  Online training seems difficult.
 
 I have finished part of the agent.py. I am working with trace class.
 
+8.2

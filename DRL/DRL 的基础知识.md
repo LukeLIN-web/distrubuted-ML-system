@@ -7,11 +7,11 @@ DRL 的基础知识
 
 强化学习
 
-<A,S,R,P>经典四元 . A 表示 agent的所有动作, state是状态, reward, P也叫model就是agent交互的env.
+<A,S,R,P>经典四元 . A 表示 agent的所有动作, state是状态, reward, P也叫model就是agent交互的env. Try and error学习policy.
 
 reward !=goal, goal是累计reward最大. 也就是value最大. 
 
-DRL 是不适用model, try and error学习policy.
+DRL 是不使用model的, 
 
 采用了DNN网络进行Q值的函数拟合, 就是DQN
 
@@ -25,13 +25,19 @@ Dueling Network把网络分成一个输出标量V(s)另一个输出动作上Adva
 
 ### 策略梯度算法是怎么写代码的?
 
-就是回传? 
+就是回传?  就是梯度回传NN 。
 
 
 
-A3C
+Actor-critic
 
 两个网络, actor网络, 预测下一个action可能的分布,  critic给state 估计reward.
+
+a3c
+
+一个master, 多个actor-critic
+
+
 
 
 
@@ -41,4 +47,4 @@ A3C
 
 定义validate , 是检查是否有效.
 
-pointer 类, 可以计算下一个state/
+pointer 类, 可以计算下一个stat
