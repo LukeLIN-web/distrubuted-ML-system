@@ -20,6 +20,12 @@ D 哪些参考文献是值得follow 的
 
 50 Device Placement Optimization with Reinforcement Learning
 
+E存在的缺陷:
+
+假设 job有smooth平滑的 loss曲线而且running to completion, 这两个假设在生产系统中不一定是true. 
+
+
+
 ## 摘要
 
 面向深度学习cluster的scheduler 算法. optimus, 基于online 资源性能模型加速. 用online fitting,  Optimus 在训练过程中使用在线fitting拟合来预测模型收敛性，并建立性能模型以准确估计作为每个作业中分配资源的函数的训练速度. 基于这些模型，设计并使用了方法来动态分配资源和放置深度学习任务，以最大限度地减少作业完成时间。
