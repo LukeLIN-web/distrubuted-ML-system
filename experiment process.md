@@ -6,6 +6,8 @@
 
 尝试一个DRL 可以, 它也是用策略梯度
 
+服务器上装个x,   用ssh转发一下
+
 ImportError: libcublas.so.10.0: cannot open shared object file: No such file or directory
 
 方法1:  我把代码抄一遍用pytorch复现一遍.

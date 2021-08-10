@@ -135,6 +135,8 @@ harmony batches(批处理) interval中**新到达的**job, 然后决定他们的
 
 **state space** 
 
+这个job输入是缺点, 因为需要指定几个类型, 但是也是优点, 因为很多placment 其实只能训练一种计算图(不过如果训练很快可能也可以处理多种? 应该是要看你到底侧重那个问题, 这个论文是侧重 colocated 的, 有的论文不看重 colocated 而是就是优化一个job的放置). 
+
 输入: job type,resource demand, # of workers/PS ,available resources on the servers, placement of workers and PSs 
 
 x  每个job的类型.  N是job的数量,  L是job的类型数量也就是model的数量.  这个和DL2输入一样
