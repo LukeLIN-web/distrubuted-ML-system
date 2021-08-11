@@ -221,6 +221,10 @@ We now discuss extensions and future work on Optimus.
 |                      |                                                              | 没有修改底层ML 框架                                          |
 |                      | azalia 用model-free  DRL 实现模型并行, 对于资源分配不是通用和有效的 | 我们发现负载不平衡问题在这些分布式框架中很常见，我们在其中一个框架MXNet中提出并实现了PAA算法。 |
 
+ [后面的工作](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9355203)    认为Optimus最大限度地减少了在 PS 架构中运行的多个作业的完工时间和平均作业完成时间。 它设计了一种新颖的资源性能模型，并提出了一种调度方案来动态调整分配的工作人员和服务器的数量。 
+
+缺点:  However, the adjustment does not support “reshaping down” and is implemented based on job termination, which results in significant overhead
+
 ## 9 conclusion
 
 Optimus是一个定制的集群调度器，目标是在深度学习集群中实现高训练性能和资源效率。它的核心是一个精确的深度学习工作负载性能模型，该模型是通过利用数据模型训练的特性（如收敛性、迭代性）和参数服务器体系结构的通信模式构建的。**建模了训练速度的模型,   构建了  speed和资源的关系.**  在性能模型的基础上，设计了基于边际增益的资源分配算法和训练速度最大化的任务分配方案。在Kubernetes集群上的实验表明，Optimus的性能明显优于典型的集群调度算法。
