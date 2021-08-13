@@ -28,3 +28,16 @@ ImportError: libcublas.so.10.0: cannot open shared object file: No such file or 
 
 8.13
 
+他每个文件都有单元测试的. 我测试了一下, 他没有ali trace , 我改成了随机.
+
+https://adaptdl.readthedocs.io/en/latest/
+
+[petuum/adaptdl: Resource-adaptive cluster scheduler for deep learning training. (github.com)](https://github.com/petuum/adaptdl)
+
+
+
+adaptdl 是用两层, 可以试试能不能用DRL来做.
+
+复现一下pollux,
+
+table2 ,  99% tile是什么意思? 就是超过99%的

@@ -18,3 +18,6 @@ day by day
 
 I read paper Pollux.  I find how we could design joint learning.
 
+8.13
+
+I  try get trace, reproduce pollux 
