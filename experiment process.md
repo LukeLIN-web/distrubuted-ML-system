@@ -26,3 +26,5 @@ ImportError: libcublas.so.10.0: cannot open shared object file: No such file or 
 
 为什么训练过程这么长, over 150 LOC.
 
+8.13
+
