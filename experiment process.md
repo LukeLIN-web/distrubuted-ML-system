@@ -20,7 +20,7 @@ ImportError: libcublas.so.10.0: cannot open shared object file: No such file or 
 2. 然后卸载了安装 tf1.13.1 , 显示**This page isn’t working right now** **e0844decf715** didn’t send any data.
 3. There are not any runs in the log folder.
 
-
+4. pip21.1.2 找不到tensorflow. pip10.0.1 可以找到但是显示没有.   
 
 完成了优化器, checkpoint. 企图分离agent.
 
