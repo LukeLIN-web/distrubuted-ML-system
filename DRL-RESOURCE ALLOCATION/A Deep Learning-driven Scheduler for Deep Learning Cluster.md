@@ -178,6 +178,10 @@ State. The input state to the policy NN is a matrix
 
 ​	用随机梯度下降 SGD 来更新参数,  就是NN资源分配决策和目前scheduler trace决策的交叉熵. 训练几百次.收敛到现有调度器的决策.
 
+可以参考它的simulator , 它fitting了现有的model, 这个已经搞懂了. 就是一个函数, 两个自变量 numps和num worker, 一个因变量speed. 用scipy.interpolate.Rbf 拟合. 
+
+8月14日 , 目标搞懂它输入资源放置和输出的关系. 
+
 ### 4.3 在线强化学习奖励。
 
 ​    Reward. DL2 targets average job completion time minimization in the entire cluster. Job completion time would be a natural reward to observe, but it is only known when a job is finished, which may well be hundreds of time slots later. The significant feedback delay of the reward is unacceptable for online RL, since the delayed reward provides little guidance to improve the early decisions. We design a per-timeslot reward to collect more reward samples through the job processes, for more frequent RL model updates to expedite convergence. The per-timeslot reward is the sum of normalized number of epochs that the concurrent jobs have trained in this time slot, where the number of epochs trained in job i (ti) is normalized over the overall number of epochs to train for the job (Ei)

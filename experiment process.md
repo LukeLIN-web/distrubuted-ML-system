@@ -41,3 +41,24 @@ adaptdl 是用两层, 可以试试能不能用DRL来做.
 复现一下pollux,
 
 table2 ,  99% tile是什么意思? 就是超过99%的
+
+
+
+8.14
+
+**怎么做实验? DRL没有env怎么办?** 
+
+但是不是让你用k8s实际部署一个job, 到machine跑完, 测时间, 而是根据trace 模拟出来大概要多久,这样你就可以在本地训练大量数据
+
+最好能做个模型在这些环境跑一跑,咱们就知道你的方案可不可行
+
+simulation就是说你给一个job的placement和他的资源数量 告诉你这个job跑了多久,不是实际在机器跑 而是直接给你一个时间. 就是RL的env
+
+**trace读了什么?**
+
+我下午做一个45分钟就可以知道. 
+
+可以参考它的simulator , 它fitting了现有的model, 这个已经搞懂了. 就是一个函数, 两个自变量 numps和num worker, 一个因变量speed. 用scipy.interpolate.Rbf 拟合. 
+
+8月14日 , 目标搞懂它输入资源放置和输出速度的关系. 
+
