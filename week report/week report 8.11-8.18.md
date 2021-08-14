@@ -38,7 +38,7 @@ input :
 
 8.14 
 
-I implement the simulator.
+I implement the simulator. I learned how to parser trace.
 
 
 

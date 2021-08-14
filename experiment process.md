@@ -58,7 +58,34 @@ simulation就是说你给一个job的placement和他的资源数量 告诉你这
 
 我下午做一个45分钟就可以知道. 
 
-可以参考它的simulator , 它fitting了现有的model, 这个已经搞懂了. 就是一个函数, 两个自变量 numps和num worker, 一个因变量speed. 用scipy.interpolate.Rbf 拟合. 
+可以参考它的simulator , 它fitting了现有的model, 这个已经搞懂了. 就是一个函数, 两个自变量 numps和num worker, 一个因变量speed. 用scipy.interpolate.Rbf 拟合.  
 
-8月14日 , 目标搞懂它输入资源放置和输出速度的关系. 
+8月14日 , 目标搞懂它输入资源放置和输出速度的关系. 给一个job 的资源, 告诉你reward. reward是运行的epoch数/总epoch. 在哪里告诉你的?
+
+get trace  做了什么?
+
+就是生成一些job,给job赋值, job有很多属性
+
+1. batch szie 
+2. 带宽
+3. speed func(在job.py中用来得到epoch) 
+4. 考虑了误差的 总epoch
+
+trace是有100个job list的字典.  一个job list 10个job
+
+为什么要是字典? TS是什么意思? 就是timeslot
+
+好像看完了。 感觉不对， device placement的 模拟做不来？ 因为没有device 的trace ， co-located ， 这个trace不能用？  device placement的 trace 需要哪些参数？ 
+
+
+
+然后明天要干嘛
+
+8.15
+
+
+
+
+
+
 

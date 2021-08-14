@@ -178,9 +178,7 @@ State. The input state to the policy NN is a matrix
 
 ​	用随机梯度下降 SGD 来更新参数,  就是NN资源分配决策和目前scheduler trace决策的交叉熵. 训练几百次.收敛到现有调度器的决策.
 
-可以参考它的simulator , 它fitting了现有的model, 这个已经搞懂了. 就是一个函数, 两个自变量 numps和num worker, 一个因变量speed. 用scipy.interpolate.Rbf 拟合. 
 
-8月14日 , 目标搞懂它输入资源放置和输出的关系. 
 
 ### 4.3 在线强化学习奖励。
 
@@ -278,10 +276,21 @@ State. The input state to the policy NN is a matrix
 
 ### 6.2 Methodology 
 
-**Testbed.** Our testbed includes 13 GPU/CPU servers
-connected by a Dell Networking Z9100-ON 100GbE switch. Each server has one Intel E5-1660 v4 CPU, two GTX 1080Ti GPUs, 48GB RAM, one MCX413A-GCAT 50GbE NIC, one 480GB SSD, and one 4TB HDD. Each server runs Ubuntu 14.04 LTS and Docker 17.09-ce [7]. 
+**Testbed.** Our testbed includes 13 GPU/CPU servers connected by a Dell Networking Z9100-ON 100GbE switch. Each server has one Intel E5-1660 v4 CPU, two GTX 1080Ti GPUs, 48GB RAM, one MCX413A-GCAT 50GbE NIC, one 480GB SSD, and one 4TB HDD. Each server runs Ubuntu 14.04 LTS and Docker 17.09-ce.
 
-**Trace.** We use patterns from a 75-day real-world job trace collected from a large production DL cluster with a few thousands of GPUs and thousands of jobs, to drive
+**Trace.** We use patterns from a 75-day real-world job trace collected from a large production DL cluster with a few thousands of GPUs and thousands of jobs, to drive our testbed experiments and simulation studies. Fig. 8 (a) shows the job arrival rate (number of jobs arrived per time slot, i.e., 20 minutes) during a typical week. Fig. 8 (b) shows the distribution of job duration: over a half of jobs run for more than an hour and some for days; the average job duration is 147 minutes.
+
+​	Due to security and privacy concerns of the company, the job source code is not available, and we do not know job details (e.g., model architecture). So we select 8 categories of ML models for experiments, from official MXNet tutorials [10], with representative application domains, different architectures and parameter sizes [10], as shown in Table 1. Each worker in different jobs uses at most 2 GPUs and 1-4 CPU cores, and each PS uses 1-4 CPU cores. 
+
+这个就是trace.py里面的self.resr worker 和resr ps.
+
+​	In both testbed experiments and simulations, the jobs are submitted to the cluster following the dynamic pattern in Fig. 8 (a) (with arrival rates scaled down). Upon an arrival event, we randomly select a model from Table 1 and vary its required number of training epochs (tens to hundreds) to generate a job variant, following job running time distribution of the real-world trace (scaled down). For models training on large datasets (e.g., ImageNet [8]), we downscale the datasets so that the training can be finished in a reasonable amount of time. In experiments, 30 jobs are submitted to run in our testbed; in simulations, 500 servers are simulated, and 200 jobs are submitted in the simulated cluster
+
+这里有讲testbed 随机选一个模型, 产生一个job变量. 根据 fittng的function 改变 required epoch.   
+
+**Training setting.** Our DL-based scheduler is implemented using TensorFlow [15]. The neural network is trained using Adam optimizer [34] with a fixed learning rate of 0.005 for offline supervised learning and 0.0001 for online reinforcement learning, mini-batch size of 256 samples, reward discount factor γ = 0.9, exploration constant  = 0.4, entropy weight β = 0.1, and an experience replay buffer of 8192 samples. The network has 2 hidden layers with 256 neurons each. These hyper-parameters (neural network structure, learning rate, mini-batch size, etc.) are chosen based on a few empirical training trials. We refer to one update of the neural network at the end of each time slot as one step in this section
+
+**Baseline**
 
 主导资源公平性（DRF）[24]：它根据主导资源的公平性为工作分配资源。 默认情况下，我们使用 DRF 作为现有调度器，用于指导 DL2 中的监督学习，因为它在现有集群调度器中被广泛采用，例如 YARN [58]、Mesos [31]
 
