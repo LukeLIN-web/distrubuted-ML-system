@@ -40,5 +40,20 @@ input :
 
 I implement the simulator. I learned how to parser trace.
 
+8.15
 
+I estimate the influence of differnet placement. 
+
+```mermaid
+graph 
+gradientSize --> communicate_Throughout
+parameterNum --> communicate_Throughout
+communicate_Throughout --> communicate_Time
+```
+
+
+
+Firstly, I calculate model size. We only need communicate gradients, one fp32 gradient size is 4 bytes. We multiple it with the number of parameters. 
+
+Secondly, 
 
