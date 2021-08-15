@@ -290,11 +290,25 @@ State. The input state to the policy NN is a matrix
 
 **Training setting.** Our DL-based scheduler is implemented using TensorFlow [15]. The neural network is trained using Adam optimizer [34] with a fixed learning rate of 0.005 for offline supervised learning and 0.0001 for online reinforcement learning, mini-batch size of 256 samples, reward discount factor γ = 0.9, exploration constant  = 0.4, entropy weight β = 0.1, and an experience replay buffer of 8192 samples. The network has 2 hidden layers with 256 neurons each. These hyper-parameters (neural network structure, learning rate, mini-batch size, etc.) are chosen based on a few empirical training trials. We refer to one update of the neural network at the end of each time slot as one step in this section
 
+
+
 **Baseline**
 
 主导资源公平性（DRF）[24]：它根据主导资源的公平性为工作分配资源。 默认情况下，我们使用 DRF 作为现有调度器，用于指导 DL2 中的监督学习，因为它在现有集群调度器中被广泛采用，例如 YARN [58]、Mesos [31]
 
- • 俄罗斯方块 TETRIS[27]：优先将资源分配给剩余完成时间最短、资源打包效率最高的作业。 
+ • 俄罗斯方块 TETRIS[27]：优先将资源分配给剩余完成时间最短、资源打包效率最高的作业。  
+
+代码实现中,计算分数.
+
+```python
+mean_resr_score[job] = np.sum(resr) * (1 - job.progress / job.num_epochs)
+mean_align_score[job] = np.sum((pm.NUM_RESR_SLOTS - used_resrs) * resr)
+NUM_RESR_SLOTS = 8  # number of available resource slots on each machine  (插槽的数量- 用了的数量)*job.resr_worker
+node, used_resrs = node_used_resr_queue.get()
+resr = job.resr_worker
+```
+
+
 
  • Optimus [49]：它是一个定制的DL 工作负载调度器，它为深度学习作业构建性能模型以估计剩余训练时间，并采用贪婪启发式调度作业。 
 
