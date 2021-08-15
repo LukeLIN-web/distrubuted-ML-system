@@ -6,6 +6,19 @@ pytorch
 
 随机种子`manual_seed`
 
+### 求导
+
+
+
+```python
+y.backward()
+x.grad  就知道梯度了
+x.grad.zero_() #  把0写入梯度,也就是清零.
+# 我们一般不会求微分矩阵, 而是每个样本单独计算的偏导数之和
+y = x * x 
+y.sum().backward() 
+```
+
 
 
 ### network
