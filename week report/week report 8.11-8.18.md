@@ -46,14 +46,34 @@ I estimate the influence of differnet placement.
 
 ```mermaid
 graph 
-gradientSize --> communicate_Throughout
-parameterNum --> communicate_Throughout
-communicate_Throughout --> communicate_Time
+gradientSize --> communication_Throughout
+parameterNum --> communication_Throughout
+PSorAllreduce --> communication_Throughout
+communication_Throughout --> communication_Time
+bus_bandwidth--> communication_Time
+```
+
+Firstly, I calculate model size. We only need communicate gradients, one fp32 gradient size is 4 bytes. We multiple it with the number of parameters to gain  communication throughout
+
+model:
+
+["resnet-50",25 millions
+
+ "vgg-16"138 million
+
+, "resnext-110", "inception-bn", "seq2seq", "cnn-text-classification", "dssm", "wlm"]
+
+```py
+from keras.applications.resnet50 import ResNet50
+
+resnet_model = ResNet50(weights='imagenet')
+
+#resnet_model.count_params()
+resnet_model.summary()
+Trainable params: 25,583,592
 ```
 
 
 
-Firstly, I calculate model size. We only need communicate gradients, one fp32 gradient size is 4 bytes. We multiple it with the number of parameters. 
-
-Secondly, 
+Secondly, I studied bandwidth, 
 
