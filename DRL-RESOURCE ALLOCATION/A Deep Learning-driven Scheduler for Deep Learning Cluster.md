@@ -28,7 +28,7 @@ D 哪些参考文献是值得follow的
 
    有效的资源调度对于最大限度地利用昂贵的 DL 集群至关重要。 现有的集群调度器要么对 ML 工作负载特征不可知，要么使用基于操作员对特定 ML 框架和工作负载的理解的调度启发式，这些方法效率较低或不够通用。 在本文中，我们展示了可以采用 DL 技术来设计通用且高效的调度程序。
 
-​	 DL2 是 DL 集群的 DL 驱动调度程序，通过动态调整分配allocate给job的资源大小来针对global 训练作业 expedition。 DL2 提倡联合监督学习(应该就是线上和线下)和强化学习方法：基于现有集群调度器产生的作业trace，通过离线监督学习对神经网络进行预热； 然后将神经网络插入(代码上是怎么plug 的?  )实时 DL 集群，通过在 DL 作业的整个训练过程中进行的强化学习进行微调(我们的改进就是能不能placement 也用强化学习)，并用于以在线方式决定作业资源分配。 通过在准备监督学习阶段应用现有集群调度器做出的过去决策，我们的方法可以实现从现有调度器的平滑过渡，并在最小化平均训练完成时间方面提供高质量的调度器。 我们在 Kubernetes 上实施 DL2，并在 MXNet 上的 DL 作业中启用动态资源扩展。 广泛的评估表明，DL2 在平均作业完成时间方面优于公平调度程序（即 DRF）44.1% 和专家启发式调度程序（即 Optimus）17.5%
+​	 DL2 是 DL 集群的 DL 驱动调度程序，通过动态调整分配allocate给job的资源大小来针对global 训练作业 expedition。 DL2 提倡联合监督学习(应该就是线上和线下)和强化学习方法：基于现有集群调度器产生的作业trace，通过离线监督学习对NN进行预热； 然后将NN插入(代码上是怎么plug 的?  )实时 DL 集群，通过在 DL 作业的整个训练过程中进行的强化学习进行微调(我们的改进就是能不能placement 也用强化学习)，并用于以在线方式决定作业资源分配。 通过在准备监督学习阶段应用现有集群调度器做出的过去决策，我们的方法可以实现从现有调度器的平滑过渡，并在最小化平均训练完成时间方面提供高质量的调度器。 我们在 Kubernetes 上实施 DL2，并在 MXNet 上的 DL 作业中启用动态资源扩展。 广泛的评估表明，DL2 在平均作业完成时间方面优于公平调度程序（即 DRF）44.1% 和专家启发式调度程序（即 Optimus）17.5%
 
 ## 1 介绍
 
@@ -47,7 +47,7 @@ D 哪些参考文献是值得follow的
 ​	In this paper, we pursue a DL cluster scheduler that
 does not depend on expert heuristics and explicit modeling, resorting to a black-box end-to-end approach enabled by modern learning techniques. We propose DL2, a deep learning-driven scheduler for deep learning clusters, that dynamically adjusts resource allocation to training jobs on the go. DL2 learns resource allocation policies through experience using deep reinforcement learning (DRL): the <u>policy neural network</u> takes the current system state as input, produces resource allocation decisions for all the current training jobs and gradually improves the decisions based on feedback. However, merely applying off-the-shelf现成的 RL algorithms to scheduling does not produce high-quality decisions, and careful design according to the problem nature is in need.
 
-策略神经网络: 
+策略NN: 
 
 输入:  当前系统的状态, 这个状态有哪些? 
 
@@ -69,9 +69,9 @@ does not depend on expert heuristics and explicit modeling, resorting to a black
 
 ### 2.1 PS框架
 
-​	我们专注于PS  架构 ，该架构在分布式 ML 学习框架中广泛用于并行训练，例如 MXNet [20]、TensorFlow [15]、PaddlePaddle [11] 和 Angel [32]。 请注意，DL2 也可以扩展到 all-reduce，如第 7 节所述。 在 PS 架构中，模型例如深度神经网络 (DNN)，在多个PS (PS) 之间进行分区，训练数据集在worker之间进行分割（在数据并行训练模型中）。 每个worker的数据分区又被分成minibatch； 每个worker在本地处理一个小批量并计算模型参数变化，通常表示为梯度。 梯度被推送到保持全局模型参数的 PS。 
+​	我们专注于PS  架构 ，该架构在分布式 ML 学习框架中广泛用于并行训练，例如 MXNet [20]、TensorFlow [15]、PaddlePaddle [11] 和 Angel [32]。 请注意，DL2 也可以扩展到 all-reduce，如第 7 节所述。 在 PS 架构中，模型例如深度NN (DNN)，在多个PS (PS) 之间进行分区，训练数据集在worker之间进行分割（在数据并行训练模型中）。 每个worker的数据分区又被分成minibatch； 每个worker在本地处理一个小批量并计算模型参数变化，通常表示为梯度。 梯度被推送到保持全局模型参数的 PS。 
 
-我们专注于同步训练，其中工人的训练进度是同步的，并且 PS 在每次迭代中收到所有工人的梯度后更新全局模型。 更新的参数被发送回worker。 worker通过使用更新后的参数处理下一个小批量来开始下一个训练迭代/步骤。 在整个数据集中的所有小批量处理完一次后，就完成了一个 training epoch。 输入数据集通常训练多个epoch，直到模型收敛。
+我们专注于同步训练，其中worker的训练进度是同步的，并且 PS 在每次迭代中收到所有worker的梯度后更新全局模型。 更新的参数被发送回worker。 worker通过使用更新后的参数处理下一个小批量来开始下一个训练迭代/步骤。 在整个数据集中的所有小批量处理完一次后，就完成了一个 training epoch。 输入数据集通常训练多个epoch，直到模型收敛。
 
 ### 2.2motivation
 
@@ -87,9 +87,9 @@ does not depend on expert heuristics and explicit modeling, resorting to a black
 
 ​	From the above, we see that it is challenging to reason about which job will have the largest marginal gain from extra resources and what the best PS-to-worker ratio is, as they are affected by many factors, e.g., allocated resources, models. Existing schedulers largely side-step this problem and leave it to the user to decide how many PSs/workers to use.
 
-静态资源分配。 GPU 集群资源通常没有被充分利用：当一个训练作业完成时，它释放的资源（例如，昂贵的 GPU）可能会空闲，而不是被仍在运行的剩余作业利用 我们看到 GPU 利用率水平随时间显着变化，当集群负载低/高时，为训练作业中的动态资源扩展/缩减提供了机会。 我们提倡在训练作业中随着时间的推移动态调整 worker/PS 数量，以最大限度地利用 DL 集群中的可用资源来加快作业完成。 有了这个，我们进一步不要求用户提交 他们的worker和PS数量,the number of workers/PSs they want to use in their jobs (who nonetheless may not be at the best position to decide that), but will decide the best worker/PS numbers for each user at each time based on both global resource availability and individual jobs’ performance.
+静态资源分配。  GPU 集群资源通常没有被充分利用：当一个训练作业完成时，它释放的资源（例如，昂贵的 GPU）可能会空闲，而不是被仍在运行的剩余作业利用.  我们看到 GPU 利用率水平随时间显着变化，当集群负载低/高时，为训练作业中的动态资源扩展/缩减提供了机会。 我们提倡在训练作业中随着时间的推移动态调整 worker/PS 数量，以最大限度地利用 DL 集群中的可用资源来加快作业完成。 有了这个，我们进一步不要求用户提交 他们的worker和PS数量,the number of workers/PSs they want to use in their jobs (who nonetheless may not be at the best position to decide that), but will decide the best worker/PS numbers for each user at each time based on both global resource availability and individual jobs’ performance.
 
-​	**White-box heuristics.** There have been existing studies which explicitly model detailed relationship between the training speed and resources within jobs, and design scheduling heuristics based on the resource-speed model, e.g., SLAQ [67], Optimus [49] and OASiS [18]. They have two limitations. First, in order to derive an accurate performance model, the modeling process is coupled tightly with ML framework implementation, and remodeling is often needed when the framework changes (e.g., adding new features or adopting optimization). For example, Optimus models computation and communication as two separate procedures during one training step; its model needs to be rebuilt when new features are incorporated into ML frameworks, e.g., overlapping backward computation with communication, gradient compression [20].其次，**在不考虑多租户 GPU 集群中的干扰的情况下构建显式性能模型。** 例如，SLAQ和 Optimus [49] 假设 PS 上没有网络拥塞，而 OASiS [18] 和 Optimus [49] 假设可用带宽是一个常数。 但是，我们观察到训练相同模型的速度可能会有很大差异。 Second, explicit performance models are built without considering interference in multi-tenant GPU clusters. 白盒启发式。 已有研究明确地对作业内的训练速度和资源之间的详细关系进行建模，并基于资源速度模型设计调度启发式. 它们有两个限制。 首先，**为了推导出准确的性能模型，建模过程与 ML 框架实现紧密耦合，当框架发生变化（例如，添加新功能或采用优化）时，通常需要重构。** 例如，Optimus 在一个训练步骤中将计算和通信建模为两个独立的过程； 当新功能被纳入 ML 框架时，它的模型需要重建，例如，将反向计算与通信重叠，梯度压缩 [20]。  此外，对 ML 作业之间的干扰进行显式建模也非常困难 [17]，因为每个额外的维度（神经网络结构、并行架构、运行时隔离等）都会增加复杂性。
+​	**White-box heuristics.** There have been existing studies which explicitly model detailed relationship between the training speed and resources within jobs, and design scheduling heuristics based on the resource-speed model, e.g., SLAQ [67], Optimus [49] and OASiS [18]. They have two limitations. First, in order to derive an accurate performance model, the modeling process is coupled tightly with ML framework implementation, and remodeling is often needed when the framework changes (e.g., adding new features or adopting optimization). For example, Optimus models computation and communication as two separate procedures during one training step; its model needs to be rebuilt when new features are incorporated into ML frameworks, e.g., overlapping backward computation with communication, gradient compression [20].其次，**在不考虑多租户 GPU 集群中的干扰的情况下构建显式性能模型。** 例如，SLAQ和 Optimus [49] 假设 PS 上没有网络拥塞，而 OASiS [18] 和 Optimus [49] 假设可用带宽是一个常数。 但是，我们观察到训练相同模型的速度可能会有很大差异。 Second, explicit performance models are built without considering interference in multi-tenant GPU clusters. 白盒启发式。 已有研究明确地对作业内的训练速度和资源之间的详细关系进行建模，并基于资源速度模型设计调度启发式. 它们有两个限制。 首先，**为了推导出准确的性能模型，建模过程与 ML 框架实现紧密耦合，当框架发生变化（例如，添加新功能或采用优化）时，通常需要重构。** 例如，Optimus 在一个训练步骤中将计算和通信建模为两个独立的过程； 当新功能被纳入 ML 框架时，它的模型需要重建，例如，将反向计算与通信重叠，梯度压缩 [20]。  此外，对 ML 作业之间的干扰进行显式建模也非常困难 [17]，因为每个额外的维度（NN结构、并行架构、运行时隔离等）都会增加复杂性。
 
 In contrast to white-box model-based schedulers, we
 resort to a black-box approach and design an RL-based resource scheduler: it automatically learns end-to-end resource allocation policy without requiring expert heuristics and without explicitly modeling the ML framework, the workload, and the interference.与基于白盒模型的调度器相比，我们采用黑盒方法并设计了基于 RL 的资源调度器：它自动学习端到端的资源分配策略，无需专家启发式方法，也无需对 ML 框架,工作量和干扰进行显式建模 、
@@ -110,9 +110,9 @@ resort to a black-box approach and design an RL-based resource scheduler: it aut
 
 ### 3.1 DL 集群
 
-​	在具有多个 GPU 服务器的 DL 集群中，随着时间的推移提交 job。 每个job都运行一个分布式 ML 框架（例如我们的实验中的 MXNet），重复训练数据集来learning特定的 DL 模型。 提交作业后，job owner，提供她/他分别运行每个工人和每个 PS 的资源需求，以及要运行的训练时期总数。 例如，一个worker至少 1 个 GPU 和一个 PS 需要许多 CPU 内核。 可以基于专家知识或工作经历来估计实现模型收敛的总训练epoch数（例如，模型的损失或准确性的收敛)
+​	在具有多个 GPU 服务器的 DL 集群中，随着时间的推移提交 job。 每个job都运行一个分布式 ML 框架（例如我们的实验中的 MXNet），重复训练数据集来learning特定的 DL 模型。 提交作业后，job owner，提供她/他分别运行每个worker和每个 PS 的资源需求，以及要运行的训练时期总数。 例如，一个worker至少 1 个 GPU 和一个 PS 需要许多 CPU 内核。 可以基于专家知识或工作经历来估计实现模型收敛的总训练epoch数（例如，模型的损失或准确性的收敛)
 
-​	根据资源可用性和训练速度，每个作业可能会从一个时间段到另一个时间段运行不同数量的worker和 PS（由调度程序决定）对于同步训练，为了保证相同的训练结果（模型）同时改变工人的数量，我们调整每个工人的mini batch大小，以便用户指定的作业中的总batch大小仍然保持不变  对于异步训练，每个工人的小批量大小保持不变，而工人数量不同（因为全局批量大小等于每个工人的批量大小）
+​	根据资源可用性和训练速度，每个作业可能会从一个时间段到另一个时间段运行不同数量的worker和 PS（由调度程序决定）对于同步训练，为了保证相同的训练结果（模型）同时改变worker的数量，我们调整每个worker的mini batch大小，以便用户指定的作业中的总batch大小仍然保持不变  对于异步训练，每个worker的小批量大小保持不变，而worker数量不同（因为全局批量大小等于每个worker的批量大小）
 
 ### 3.2 DL Scheduler
 
@@ -120,9 +120,9 @@ resort to a black-box approach and design an RL-based resource scheduler: it aut
 
 #### Offline supervised learning. 
 
-For warm-up, we use supervised learning to train the policy NN, to initialize a policy whose performance is as good as the existing scheduler in the DL cluster. A small set of historical job runtime traces collected from the cluster are used for supervised learning, to allow the NN to produce similar decisions as made by the existing scheduler. This step is a must due to the poor performance of applying online RL directly (see Fig. 10)   DL2 采用策略神经网络 (NN) 的联合离线和在线学习，为集群中的并发作业做出资源分配决策。 图 5 给出了 DL2 的概述。
+For warm-up, we use supervised learning to train the policy NN, to initialize a policy whose performance is as good as the existing scheduler in the DL cluster. A small set of historical job runtime traces collected from the cluster are used for supervised learning, to allow the NN to produce similar decisions as made by the existing scheduler. This step is a must due to the poor performance of applying online RL directly (see Fig. 10)   DL2 采用策略NN (NN) 的联合离线和在线学习，为集群中的并发作业做出资源分配决策。 图 5 给出了 DL2 的概述。
 
-离线监督学习。  warm up 使用监督学习来训练策略神经网络，以初始化一个策略，其性能与 DL 集群中现有的调度程序一样好。 从集群中收集的一小组 runtime trace用于监督学习，以允许 NN 生成与现有调度程序所做的类似决策。 由于直接应用在线 RL 的性能不佳， this step is a must.
+离线监督学习。  warm up 使用监督学习来训练策略NN，以初始化一个策略，其性能与 DL 集群中现有的调度程序一样好。 从集群中收集的一小组 runtime trace用于监督学习，以允许 NN 生成与现有调度程序所做的类似决策。 由于直接应用在线 RL 的性能不佳， this step is a must.
 
 #### Online reinforcement learning. 
 
@@ -148,15 +148,15 @@ State. The input state to the policy NN is a matrix
 
 输入包括 job type,  job has run的时间,  remaining epochs , allocated resources, allocated workers, allocated PSs.https://q.uiver.app/?q=WzAsOCxbMywxLCJwb2xpY3lOTiJdLFs1LDEsImFsbG9jYXRlXFxcXHdvcmtlci9QUyJdLFswLDAsImpvYlxcXFx0eXBlIl0sWzAsMSwicnVudGltZSJdLFswLDIsInJlbWFpbmluZ1xcXFxlcG9jaCJdLFswLDMsImRvbWFpbnQgcmVzb3VyY2UiXSxbMCw0LCJqb2Inc1xcXFx3b3JrZXIiXSxbMCw1LCJqb2Inc1xcXFxQUyJdLFswLDFdLFsyLDBdLFs3LDBdXQ==
 
-- x 表示在作业中训练的 DL 模型JxL的矩阵，其中 J 是我们正在调度的时间段中并发作业的最大数量的上限，L 是集群中任何时候训练作业类型的最大数量。 我们将 DL 作业训练类似的 DNN 架构视为我们输入中的相同类型。 例如，基于相同的预训练模型的微调作业很常见，它们可以被视为同一类型。
+- x 表示在作业中训练的 DL 模型JxL的矩阵，其中 J 是我们正在调度的时间段中并发作业的最大数量的上限，L 是集群中任何时候训练作业类型的最大数量。 我们将 DL 作业训练类似的 DNN 架构视为我们输入中的相同类型。 例如，基于相同的预训练模型的微调作业很常见，它们可以被视为同一类型。(这应该是one hot 编码的)
 
-- d 表示  一个 J 维向量，编码每个作业在集群中运行的time slot数，用于所有作业。 例如，di 是作业 i 运行的time slot数。
+- d 表示  一个 J 维向量，编码每个作业在集群中运行的time slot数，用于所有作业。 例如，di 是作业 i 运行的time slot数。也就是输入运行了多久. 
 
-- e 一个 J 维向量，编码为每个作业训练的剩余 epoch 数。ei 是用户指定的总训练时期数之间的差值.
+- e 一个 J 维向量，编码为每个作业训练的剩余 epoch 数。ei 是用户指定的总训练时期数之间的差值. 也就是输入还需要多久. 这些是怎么调整的? yixin bao说是尝试了各种输入找到效果最好的. 
 
 - r一个 J 维向量, 表示分配给每个job的主导资源, 例如，ri 是分配给作业 i 的主导资源（与集群中资源的总容量相比，作业占用的资源最多） 这个就是类型. 比如CPU , GPU .  每个worker的单位资源是固定的, 不是job owner提交的,  在论文中 一开始确定下来简化问题. 
 
-- w和u 它们中的每一个都是一个 J 维向量，其中第 i 项是当前时隙中分配给作业 i 的工人 (PS) 的数量。 
+- w和u 它们中的每一个都是一个 J 维向量，其中第 i 项是当前时隙中分配给作业 i 的worker (PS) 的数量。 
 
 根据作业的到达时间进行排序。 输入状态不直接包括集群中可用的资源容量； 我们的调度程序可以处理集群中随时间变化的整体资源容量。(因为是一个个放置, 直到用完为止.)
 
@@ -164,13 +164,13 @@ State. The input state to the policy NN is a matrix
 
 **action** 输出包括  3 × J + 1 个动作
 
- NN 产生策略 π : π(a | s; θ) → [0, 1]，这是动作空间上的概率分布。  a 代表一个动作，θ 是神经网络中的当前参数集。 一个简单的设计是允许每个动作指定分配给所有并发作业的工人/PS 的数量； 这导致了一个指数级大的动作空间，包含所有可能的工人/PS 编号组合。 大的action space会导致大量的训练成本和缓慢的收敛
+ NN 产生策略 π : π(a | s; θ) → [0, 1]，这是动作空间上的概率分布。  a 代表一个动作，θ 是NN中的当前参数集。 一个简单的设计是允许每个动作指定分配给所有并发作业的worker/PS 的数量； 这导致了一个指数级大的动作空间，包含所有可能的worker/PS 编号组合。 大的action space会导致大量的训练成本和缓慢的收敛
 
-  为了加快神经网络的学习，我们简化了动作定义，并允许神经网络通过每个推理从以下 3 × J + 1 个动作中输出一个动作：(i) (i, 0)，意味着分配一个工人到工作 i, (ii) (i, 1), 为作业 i 分配一个 PS, (iii) (i, 2), 为作业 i 分配一个工人和一个 PS, (iv) 一个无效动作，表示当前时隙停止分配资源（因为分配更多资源不一定会导致更高的训练速度)由于每个推理只输出要分配给 J 个作业之一的增量资源，因此我们允许对 NN 进行多次推理，以在每个时隙中生成完整的资源分配决策集( 这个是说需要一个timeslot的时间生成吗?)：在生成一个动作后，我们更新状态 s， 然后使用神经网络产生另一个动作； 重复推理直到资源被使用完或产生无效动作。  
+  为了加快NN的学习，我们简化了动作定义，并允许NN通过每个推理从以下 3 × J + 1 个动作中输出一个动作：(i) (i, 0)，意味着分配一个worker到工作 i, (ii) (i, 1), 为作业 i 分配一个 PS, (iii) (i, 2), 为作业 i 分配一个worker和一个 PS, (iv) 一个无效动作，表示当前时隙停止分配资源（因为分配更多资源不一定会导致更高的训练速度)由于每个推理只输出要分配给 J 个作业之一的增量资源，因此我们允许对 NN 进行多次推理，以在每个时隙中生成完整的资源分配决策集( 这个是说需要一个timeslot的时间生成吗?)：在生成一个动作后，我们更新状态 s， 然后使用NN产生另一个动作； 重复推理直到资源被使用完或产生无效动作。  
 
-  虽然我们在每个时间段内为每个作业重新生成工人/PS ，但对于在前一个时间段内运行的作业，我们比较新的和以前的数量并执行动态缩放以仅调整部署数量（§5  ）
+  虽然我们在每个时间段内为每个作业重新生成worker/PS ，但对于在前一个时间段内运行的作业，我们比较新的和以前的数量并执行动态缩放以仅调整部署数量（§5  ）
 
-  **神经网络NN架构**。 输入状态矩阵 s 连接到一个全连接层，使用 ReLU [48] 函数进行激活。 这一层的神经元数量与状态矩阵的大小成正比。 该层的输出聚合在一个隐藏的全连接层中，然后连接到最终的输出层。 最后的输出层使用 softmax 函数 [25] 作为激活函数。  NN 架构是基于经验训练试验empirical training trials设计的(作者也不知道为啥反正可以work)
+  **NNNN架构**。 输入状态矩阵 s 连接到一个全连接层，使用 ReLU [48] 函数进行激活。 这一层的神经元数量与状态矩阵的大小成正比。 该层的输出聚合在一个隐藏的全连接层中，然后连接到最终的输出层。 最后的输出层使用 softmax 函数 [25] 作为激活函数。  NN 架构是基于经验训练试验empirical training trials设计的(作者也不知道为啥反正可以work)
 
 ### 4.2 Offline Supervised Learning
 
@@ -192,7 +192,7 @@ State. The input state to the policy NN is a matrix
 
 用 累计reward求导.
 
-​	**基于策略梯度的学习。** 在在线强化学习中，通过离线监督学习获得的策略神经网络使用 REINFORCE 算法 [62] 进一步训练，以最大化预期累积折扣reward  我们将问题建模为具有长期影响的非线性问题，而不是具有一轮独立反馈的传统线性模型，例如上下文老虎机 [36]，因为不同时隙中的动作是相关的。  REINFORCE 算法通过对 E[ 求和∞ t=0 −γtrt] 执行 SGD 来更新策略网络的参数 θ。
+​	**基于策略梯度的学习。** 在在线强化学习中，通过离线监督学习获得的策略NN使用 REINFORCE 算法 [62] 进一步训练，以最大化预期累积折扣reward  我们将问题建模为具有长期影响的非线性问题，而不是具有一轮独立反馈的传统线性模型，例如上下文老虎机 [36]，因为不同时隙中的动作是相关的。  REINFORCE 算法通过对 E[ 求和∞ t=0 −γtrt] 执行 SGD 来更新策略网络的参数 θ。
 
 ​    梯度可以先计算 Q,  Q= 选择action a后的预期 cumulative discounted reward.  Q 根据 minibatch 样本来计算.
 
@@ -210,10 +210,10 @@ State. The input state to the policy NN is a matrix
 
 ​	**job-aware探索**。 为了通过 RL 获得好的策略，我们需要确保充分探索行动空间（即可以充分产生导致良好回报的行动）； 否则，RL 可能会收敛到较差的局部最优策略 [60] [46]。 我们首先采用一种常用的熵entropy探索方法，通过在梯度计算中添加熵正则化项 来更新策略网络[46]。  这样策略网络的参数 θ 朝着更高熵的方向更新（意味着探索更多的动作空间）
 
-​	在训练期间，由于不了解工作语义，我们观察到大量不必要的或糟糕的探索（例如，为工作分配多个工人但 0 PS）。 为了提高探索效率，我们采用了另一种基于omega-greedy 方法的技术[55]。 在使用策略网络的每次推理中，我们检查输入状态：如果输入状态属于我们已经识别的不良状态之一.  那么 概率为 1 − omega应用策略网络产生的资源分配决策， omega概率，我们丢弃来自策略网络的输出，采用指定的动作并观察该动作的奖励。
+​	在训练期间，由于不了解工作语义，我们观察到大量不必要的或糟糕的探索（例如，为工作分配多个worker但 0 PS）。 为了提高探索效率，我们采用了另一种基于omega-greedy 方法的技术[55]。 在使用策略网络的每次推理中，我们检查输入状态：如果输入状态属于我们已经识别的不良状态之一.  那么 概率为 1 − omega应用策略网络产生的资源分配决策， omega概率，我们丢弃来自策略网络的输出，采用指定的动作并观察该动作的奖励。
 
-   差输入状态集包括三种情况：（i）存在一个要调度的作业，该作业已分配给多个工人但没有 PS；  (ii) 存在一份工作分配了多个 PS 但没有工人；  (iii) 存在一项工作，其分配的工人 (w) 和 PSs (u) 的分配数量差异太大，即 w/u > 阈值或 u/w > 阈值（在我们的实验中阈值为 10） 我们对这些输入状态中的每一个手动指定的操作是：（i）为该作业分配一个 PS；  (ii) 为该工作再分配一名工人；  (iii) 为该工作再分配一名 PS 或一名工人，使其工人/PS 数量更加均衡。
-	**experience replay**。 众所周知，样本之间的相关性会阻止 actor-critic 模型收敛到一个好的策略 [55]。 在我们的在线 RL 中，当前的策略网络确定了以下训练样本，例如，如果策略网络发现分配更多的工人可以提高奖励，那么以下样本序列将由该策略产生的样本序列主导； 这可能会导致糟糕的反馈循环，从而阻止对具有更高奖励的样本进行探索。 
+   差输入状态集包括三种情况：（i）存在一个要调度的作业，该作业已分配给多个worker但没有 PS；  (ii) 存在一份工作分配了多个 PS 但没有worker；  (iii) 存在一项工作，其分配的worker (w) 和 PSs (u) 的分配数量差异太大，即 w/u > 阈值或 u/w > 阈值（在我们的实验中阈值为 10） 我们对这些输入状态中的每一个手动指定的操作是：（i）为该作业分配一个 PS；  (ii) 为该工作再分配一名worker；  (iii) 为该工作再分配一名 PS 或一名worker，使其worker/PS 数量更加均衡。
+	**experience replay**。 众所周知，样本之间的相关性会阻止 actor-critic 模型收敛到一个好的策略 [55]。 在我们的在线 RL 中，当前的策略网络确定了以下训练样本，例如，如果策略网络发现分配更多的worker可以提高奖励，那么以下样本序列将由该策略产生的样本序列主导； 这可能会导致糟糕的反馈循环，从而阻止对具有更高奖励的样本进行探索。 
 
   为了减轻观察到的样本序列中的相关性，我们在 actor-critic 框架中采用了经验回放 [47]。 具体来说，我们维护一个重放缓冲区来存储在最新时隙中收集的样本。 在每个时间段的末尾，我们选择一个小批量的样本，而不是使用在这个时间段收集的所有样本samples from the replay buffer to compute the gradient updates, where the samples could be from multiple previous time slots.
 
@@ -256,7 +256,7 @@ State. The input state to the policy NN is a matrix
 4) Worker update. At each worker, once its version counter equals the scaling clock received from the coordinator, the worker suspends its push/pull operations and awaits notification for completion of parameter migration. Upon notification from the coordinator, the workers update their parameter-PS mapping, establish connections with the new PS, and resume the training process.
 *3) 参数迁移。* 当参数的版本计数器达到从协调器接收到的缩放时钟时，PS 根据接收到的参数分配decisions 将其参数移动到新的 PS。  所有PS参数迁移完成后,  协调器notifies 所有worker 继续训练 
 
-*4) 工人更新。* 在每个 worker 上，一旦其版本计数器等于从协调器接收到的缩放时钟，worker 就会暂停其推/拉操作并等待参数迁移完成的通知。 收到协调器的notification后，worker更新他们的参数-PS 映射，与新的 PS 建立连接，并恢复训练过程。
+*4) worker更新。* 在每个 worker 上，一旦其版本计数器等于从协调器接收到的缩放时钟，worker 就会暂停其推/拉操作并等待参数迁移完成的通知。 收到协调器的notification后，worker更新他们的参数-PS 映射，与新的 PS 建立连接，并恢复训练过程。
 
 ​	In case of removing a PS, the scheduler chooses the PS to be removed by keeping the load balanced among the physical machines. The chosen PS sends a removal request to the coordinator. Similar steps as 2)3)4) above are then carried out, except that parameters in the removed PS are moved to other PSs, using the best-fit algorithm.    重新  第二步参数分配, 第三步 参数迁移 第四步 worker更新参数映射PS 
 
@@ -328,7 +328,7 @@ Reward function. We evaluate another reward function with DL2, which sets the re
 
 Actor-critic. To see how the actor-critic algorithm affects training, we remove the value network but only train the policy network. As widely adopted in RL community, we use the exponential moving average of rewards as a baseline in place of the output of the value network in gradient computation of the policy network. As shown in Table 2,
 
-reward 函数。 我们使用 DL2 评估另一个奖励函数，它将每个动作的奖励（向工作添加一些工人/PS）设置为工作在时间段内训练的归一化时期数(不一样吗? 默认奖励函数是啥? )。 我们发现它的性能差了 29.1%。 我们的默认奖励函数会考虑所有工作的进度，使策略网络能够学习从全局角度进行调度。 
+reward 函数。 我们使用 DL2 评估另一个奖励函数，它将每个动作的奖励（向工作添加一些worker/PS）设置为工作在时间段内训练的归一化时期数(不一样吗? 默认奖励函数是啥? )。 我们发现它的性能差了 29.1%。 我们的默认奖励函数会考虑所有工作的进度，使策略网络能够学习从全局角度进行调度。 
 
  为了了解 actor-critic 算法如何影响训练，我们移除了价值网络，只训练了策略网络。 正如 RL 社区广泛采用的那样，我们在策略网络的梯度计算中使用奖励的指数移动平均值作为基准，代替价值网络的输出。 
 
@@ -346,7 +346,7 @@ This is because the average reward is not always an effective baseline; in some 
 
 体验回放。 我们禁用体验重放并查看性能如何变化。 表 2 显示平均作业完成时间降低了 39.6%，表明经验回放对于训练至关重要。
 
-federated 联合训练。 联合训练使多个集群能够协作学习全局 DL2 模型。 我们通过实施 A3C [46] 算法来研究集群的数量如何影响策略训练，该算法使用具有不同训练数据集的多个 DL2 调度程序训练全局策略神经网络，每个调度程序用于一个集群。 图 18 显示，当我们增加集群数量时，全局性能保持稳定。 我们还观察到，对于更多的集群，由于使用了更多的训练数据集，策略 NN 的收敛速度要快得多：如果有 x 个集群，则 NN 的收敛速度几乎是 x 倍。 初步结果还表明，如果出现可扩展性问题，可以将单个大型集群划分为松散耦合的子集群，每个子集群都运行 DL2 调度程序以进行资源分配。
+federated 联合训练。 联合训练使多个集群能够协作学习全局 DL2 模型。 我们通过实施 A3C [46] 算法来研究集群的数量如何影响策略训练，该算法使用具有不同训练数据集的多个 DL2 调度程序训练全局策略NN，每个调度程序用于一个集群。 图 18 显示，当我们增加集群数量时，全局性能保持稳定。 我们还观察到，对于更多的集群，由于使用了更多的训练数据集，策略 NN 的收敛速度要快得多：如果有 x 个集群，则 NN 的收敛速度几乎是 x 倍。 初步结果还表明，如果出现可扩展性问题，可以将单个大型集群划分为松散耦合的子集群，每个子集群都运行 DL2 调度程序以进行资源分配。
 
 resource utilization. DL2 starts from offline supervised learning, to ensure basic scheduling performance comparable to the existing cluster scheduler, and then runs in the live DL cluster to make online scheduling decisions, while improving its policy through reinforcement learning using live feedback. Our testbed experiments and large-scale trace-driven simulation verify DL2’s low scaling overhead, generality in various scenarios and outperformance over hand-crafted heuristics.资源利用率。  DL2 从离线监督学习开始，保证基本调度性能与现有集群调度器相媲美，然后在实时 DL 集群中运行以做出在线调度决策，同时通过使用实时反馈的强化学习改进其策略。 . 我们的测试平台实验和大规模跟踪驱动模拟验证了 DL2 的低扩展开销、各种场景中的通用性以及优于手工启发式算法的性能。
 
@@ -356,9 +356,9 @@ resource utilization. DL2 starts from offline supervised learning, to ensure bas
 
 ​	**all reduce 架构** caffe 和cntk 支持, worker 可以直接交换模型参数.   把PS相关删除应该就可以支持了
 
-**job placement** 我们用的是默认的placement 策略, 但是worker和PS的placement 也可以用RL决定,  用NN来同时产生 allocation和polacemnt 很难, 因为action space 太大了, 但是我们可以用hierachicalNN model  . 这也就是老师要我去做的.
+**job placement** 我们用的是默认的placement 策略, 但是worker和PS的placement 也可以用RL决定,  用NN来同时产生 allocation和polacemnt 很难, 因为action space 太大了, 但是我们可以用hierachicalNN model  . 这也就是老师要我去做的.  但是如果直接把他和harmony  连起来就很糟糕, 收敛性不好, 我在看pollux 2021是否能有联合训练的好方法. 看看是怎么调度的. 
 
-实际部署。 在实际部署中，可能需要考虑以下两个问题：（1）恶意攻击欺骗神经网络输入;  (2) 检测异常调度的神经网络监控。 随着安全研究的进步和对神经网络的更深入了解，这些都是值得探索的有趣方向。
+**实际部署**。 在实际部署中，可能需要考虑以下两个问题：（1）恶意攻击欺骗NN输入;  (2) 检测异常调度的NN监控。 随着安全研究的进步和对NN的更深入了解，这些都是值得探索的有趣方向。
 
 ## 8 Related Work
 
@@ -370,7 +370,7 @@ Mirh他们也是优化计算图的placement ,   Xu他们用DRL选择网络结点
 
 Mirhoseini et al. [45][44] use DRL to optimize placement of a computation graph, to minimize running time of an individual TensorFlow job. Xu et al. [66] use DRL to select routing paths between network nodes for traffic engineering. Mao et al. [40] dynamically decide video streaming rates in an adaptive streaming system with DRL. All these studies resort to offline RL training, using data generated by analytical models or simulators. In contrast, we use offline supervised learning to prepare our NN and then online RL to further improve the NN.
 
-SLAQ 用在线fitting 调度经典ML , 但是没有人用 使用PS架构的分布式ML job.  optimus提出了 基于在线fitting 资源性能模型的动态资源scheduler.   但是这些都依赖详细建模和简化假设.   gandiva 把job 迁移到更合适的gpu , gpu共享的资源分配也是一个探索方向.  
+SLAQ 用在线fitting 调度经典ML , 但是没有人用使用PS架构的分布式ML job.  optimus提出了 基于在线fitting 资源性能模型的动态资源scheduler.   但是这些都依赖详细建模和简化假设.   gandiva 把job 迁移到更合适的gpu , gpu共享的资源分配也是一个探索方向.  
 
 **ML cluster scheduling.** SLAQ [67] adopts online fitting to estimate the training loss of convex algorithms, for scheduling jobs training classical ML models. Dorm [54] uses a utilization-fairness optimizer to schedule ML jobs. These work do not focus on distributed ML jobs using the parameter server architecture. Optimus [49] proposes a dynamic resource scheduler based on online-fitted resource-performance models. Bao et al. [18] design an online scheduling algorithm for DL jobs. These studies rely on detailed modeling of DL jobs and simplified assumptions in their design. Gandiva [63] exploits intra-job predictability to time-slice GPUs efficiently across multiple jobs, and dynamically migrate jobs to better-fit GPUs. They do not consider resource allocation adjustment; Resource allocation with GPU sharing will be an intriguing future direction to explore.
 

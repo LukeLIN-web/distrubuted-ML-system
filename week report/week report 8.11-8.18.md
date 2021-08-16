@@ -6,12 +6,6 @@
 
 
 
-
-
-
-
-
-
 day by day
 
 8.12
@@ -20,9 +14,7 @@ I read paper Pollux.  I find how we could design joint learning.
 
 8.13
 
-I  try get trace, reproduce pollux 
-
-
+I  try get trace, reproduce pollux.
 
 pollux agent:
 
@@ -36,13 +28,15 @@ pollux scheduler:
 
 input : 
 
+
+
 8.14 
 
 I implement the simulator. I learned how to parser trace.
 
-8.15
+8.15 - 8 .16
 
-I estimate the influence of differnet placement. 
+I don't have co-located trace. Ziyue Luo suggested me that I could estimate the influence of different placement. 
 
 ```mermaid
 graph 
@@ -55,25 +49,36 @@ bus_bandwidth--> communication_Time
 
 Firstly, I calculate model size. We only need communicate gradients, one fp32 gradient size is 4 bytes. We multiple it with the number of parameters to gain  communication throughout
 
-model:
+model parameters number :
 
-["resnet-50",25 millions
+"resnet-50",25 millions
 
  "vgg-16"138 million
 
-, "resnext-110", "inception-bn", "seq2seq", "cnn-text-classification", "dssm", "wlm"]
+, "resnext-110"
 
-```py
-from keras.applications.resnet50 import ResNet50
+, "inception-bn",   GoogLeNet / *Inception*-v1 : 7 million *parameters* 
 
-resnet_model = ResNet50(weights='imagenet')
+"seq2seq", 384M
 
-#resnet_model.count_params()
-resnet_model.summary()
-Trainable params: 25,583,592
-```
+Secondly, I studied bandwidth,  bandwidth depends on bus.  v100 uses NVLINK2.0  which has 300GB/s bandwith channels.   PCI-e 3.0 bandwidth = 16GB/s. 
 
+Thirdly, I studied two architeture.
 
+When we use PS architecture,  PS communicate with workers. The bottleneck is often  CPU.  
 
-Secondly, I studied bandwidth, 
+PS needs receive all gradient and send all new parameters.  If we have multiple ps , each ps saves partial parameters.
+$$
+time = throughout /bandwidth \\
+throughout= 2 * 4bytes * gradientNum* workerNum \\ 
+gradientNum = parameterNum
+$$
+When we use all-reduce architecture, worker communicate with other workers .
 
+$$
+time = throughout /bandwidth = 2*size(θ)*(N-1)/NB \\
+size(θ)  = parameterNum * 4bytes \\
+throughout= 2*size(θ)*(N-1)/N \\ 
+N = workerNum  \\ 
+B = bandwidth. \\
+$$
