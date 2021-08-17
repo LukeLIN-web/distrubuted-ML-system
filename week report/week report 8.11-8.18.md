@@ -4,17 +4,7 @@
 
 ### Progress:
 
-
-
-day by day
-
-8.12
-
-I read paper Pollux.  I find how we could design joint learning.
-
-8.13
-
-I  try get trace, reproduce pollux.
+I read the paper Pollux about how we could design joint learning.
 
 pollux agent:
 
@@ -24,19 +14,9 @@ pollux agent:
 4.  reports the fitted system throughput parameters, along with the latest gradient statistics, to PolluxSched.
 5.  After reporting to PolluxSched, PolluxAgent updates the job’s per-GPU batch size and gradient accumulation steps, by optimizing its now up-to-date goodput function with its currently allocated resources.
 
-pollux scheduler:
+I implement the simulator. I learned how to parser trace. 
 
-input : 
-
-
-
-8.14 
-
-I implement the simulator. I learned how to parser trace.
-
-8.15 - 8 .16
-
-I don't have co-located trace. Ziyue Luo suggested me that I could estimate the influence of different placement. 
+I don't have a co-located trace. Ziyue Luo suggested that I could estimate the influence of different placements. 
 
 ```mermaid
 graph 
@@ -61,13 +41,13 @@ model parameters number :
 
 "seq2seq", 384M
 
-Secondly, I studied bandwidth,  bandwidth depends on bus.  v100 uses NVLINK2.0  which has 300GB/s bandwith channels.   PCI-e 3.0 bandwidth = 16GB/s. 
+Secondly, I studied bandwidth,  bandwidth depends on bus.  v100 uses NVLINK2.0  which has 300GB/s bandwidth channels.   PCI-e 3.0 bandwidth = 16GB/s. 
 
-Thirdly, I studied two architeture.
+Thirdly, I studied two architecture.
 
-When we use PS architecture,  PS communicate with workers. The bottleneck is often  CPU.  
+When we use PS architecture,  PS communicates with workers. The bottleneck is often the CPU.  
 
-PS needs receive all gradient and send all new parameters.  If we have multiple ps , each ps saves partial parameters.
+PS needs to receive all gradients and send all new parameters.  If we have multiple ps, each ps saves partial parameters.
 $$
 time = throughout /bandwidth \\
 throughout= 2 * 4bytes * gradientNum* workerNum \\ 
