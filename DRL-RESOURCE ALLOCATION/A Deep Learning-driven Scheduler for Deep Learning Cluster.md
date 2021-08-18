@@ -170,15 +170,13 @@ State. The input state to the policy NN is a matrix
 
   虽然我们在每个时间段内为每个作业重新生成worker/PS ，但对于在前一个时间段内运行的作业，我们比较新的和以前的数量并执行动态缩放以仅调整部署数量（§5  ）
 
-  **NNNN架构**。 输入状态矩阵 s 连接到一个全连接层，使用 ReLU [48] 函数进行激活。 这一层的神经元数量与状态矩阵的大小成正比。 该层的输出聚合在一个隐藏的全连接层中，然后连接到最终的输出层。 最后的输出层使用 softmax 函数 [25] 作为激活函数。  NN 架构是基于经验训练试验empirical training trials设计的(作者也不知道为啥反正可以work)
+  **NN架构**。 输入状态矩阵 s 连接到一个全连接层，使用 ReLU [48] 函数进行激活。 这一层的神经元数量与状态矩阵的大小成正比。 该层的输出聚合在一个隐藏的全连接层中，然后连接到最终的输出层。 最后的输出层使用 softmax 函数 [25] 作为激活函数。  NN 架构是基于经验训练试验empirical training trials设计的(作者也不知道为啥反正可以work)
 
 ### 4.2 Offline Supervised Learning
 
 ​	In offline supervised learning, we use stochastic gradient descent (SGD) [56] to update parameters θ of the policy NN to minimize a loss function, which is the cross entropy of the resource allocation decisions made by the NN and decisions of the existing scheduler in the traces [38]. The NN is repeatedly trained using the trace data, e.g., hundreds of times as in our experiments, such that the policy produced by the NN converges to the policy of the existing scheduler.
 
 ​	用随机梯度下降 SGD 来更新参数,  就是NN资源分配决策和目前scheduler trace决策的交叉熵. 训练几百次.收敛到现有调度器的决策.
-
-
 
 ### 4.3 在线强化学习奖励。
 
@@ -308,17 +306,23 @@ node, used_resrs = node_used_resr_queue.get()
 resr = job.resr_worker
 ```
 
-
-
  • Optimus [49]：它是一个定制的DL 工作负载调度器，它为深度学习作业构建性能模型以估计剩余训练时间，并采用贪婪启发式调度作业。 
 
  • OfflineRL：离线强化学习算法采用纯离线训练，在与 DL2 中的在线 RL 相同的训练设置下，除了训练数据由模拟环境中的分析性能模型 [49] 生成（我们不使用trace，因为它 不包含对离线培训产生的所有决定的反馈）
 
- 在适当的情况下，我们使用单独的训练数据集和验证数据集。 两者都包括使用跟踪中的作业到达和持续时间分布生成的作业序列。 生成数据集时随机种子是不同的，以确保它们是不同的。
+ 在适当的情况下，我们使用单独的训练数据集和验证数据集。 Both include job sequences generated using the job arrival and duration distributions from the trace. 生成数据集时随机种子是不同的，以确保它们是不同的。
+
+### 6.3 Performance
+
+We first compare the performance of DL2 with baselines and show the overhead of dynamic scaling using testbed experiments. 
+
+**Comparison**. Fig. 9 shows that DL2 improves average job completion time by 44.1% when compared to DRF. Tetris performs better than DRF but worse than DL2: once it selects a job with the highest score in terms of resource packing and remaining completion time, it always adds tasks to the job until the number of tasks reaches a user-defined threshold. When compared to Optimus, DL2 achieves 17.5% higher performance, since Optimus’ estimation of training speed is inaccurate due to cluster interference and evolved MXNet framework (e.g., communication does not overlap with backward computation in Optimus’ model). DL2 also outperforms OfflineRL by37.9% due to its online training using realistic feedback.
+
+​    For a better understanding of DL2’s performance gain,Fig. 10 shows how the validated performance keeps improving during the training process, when the policy NN is trained using offline supervised learning only (green curve), online RL only (cyan curve), and offline supervised learning followed by online RL (green+blue). The average job completion time shown at each time slot (i.e., step) is computed over job sequence in the validation dataset, using the policy network trained (on the training dataset) at the current step. We see that with pure online RL, it takes hundreds of steps to achieve the same performance of DRF; with offline supervised learning, the performance quickly converges to a point that is close to DRF’s performance within tens of steps (i.e., model updates); as we continue training the NN using online RL, the performance further improves a lot. The performance of DRF is fixed as its strategy does not change over time. Besides smaller job completion time, we also observe that DL2 has higher CPU and GPU utilization (similar observation as in [49]).
 
 ### 6.4Generality
 
-Training completion time variation. To see how DL2 handles practical performance variation (which white-box schedulers may not handle well), we vary the training speeds in each type of jobs to simulate variation in the training completion time of the same type of jobs (the total numbers of epochs to train remain the same). In Fig. 13, the variation indicates how the training speed deviates from the average speed (which can be faster or slower by the respective percentage). We see that Optimus is more sensitive to the variation, as it can be easily stuck in local optimum: its scheduling relies on the convexity of the performance model, but training speed variation often breaks convexity. The average job completion time shown in all simulation figures is in time slots.
+**Training completion time variation.** To see how DL2 handles practical performance variation (which white-box schedulers may not handle well), we vary the training speeds in each type of jobs to simulate variation in the training completion time of the same type of jobs (the total numbers of epochs to train remain the same). In Fig. 13, the variation indicates how the training speed deviates from the average speed (which can be faster or slower by the respective percentage). We see that Optimus is more sensitive to the variation, as it can be easily stuck in local optimum: its scheduling relies on the convexity of the performance model, but training speed variation often breaks convexity. The average job completion time shown in all simulation figures is in time slots.
 
 ### 6.5 Training Design 
 
