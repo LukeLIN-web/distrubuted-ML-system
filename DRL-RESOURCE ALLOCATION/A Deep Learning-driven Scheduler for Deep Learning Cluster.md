@@ -200,11 +200,11 @@ State. The input state to the policy NN is a matrix
 
   我们进一步采用了多种技术来稳定在线 RL，加速策略收敛，并提高所获得策略的质量。 
 
-**actor-critic** 我们使用 actor-critic 算法 [46]（如图 6 所示）改进了基于梯度的基本策略强化学习，以加快策略网络的收敛速度。 基本思想是 让Q减去一个函数 Q(a, s; θ) − Vπ(s, θ)，其中 Vπ(s, θ) 是一个价值函数,  表示期待的reward   (这个不太懂 )representing the expected reward over the actions drawn using policy π(a | s; θ) at all times starting from time slot. 
+**actor-critic** 我们使用 actor-critic 算法 [46]（如图 6 所示）改进了基于梯度的基本策略强化学习，以加快策略网络的收敛速度。 基本思想是 让Q减去一个函数 Q(a, s; θ) − Vπ(s, θ)，其中 Vπ(s, θ) 是一个价值函数,  表示期待的reward   representing the expected reward over the actions drawn using policy π(a | s; θ) at all times starting from time slot. 
 
-这可以显示特定行动的优劣.(为什么?)
+这可以显示特定行动的优劣.(为什么?要计算的是在某一个状态 s 采取某一个动作 a 的时候，优势函数有多大。 critic 就是估计advantage的. )
 
-   还确保梯度的方差小得多，从而使policy学习更加稳定。 价值函数由价值网络评估， 网络结构和policy NN 相同，只是其最终输出层是一个没有任何激活函数的线性神经元[46]，并产生价值函数 Vπ(s,  θ)。 输入状态也和策略网络相同。 我们使用temporal  difference 方法[46]训练价值网络。 这里具体的实现要看 46号文献
+   还确保梯度的方差小得多，从而使policy学习更加稳定。 价值函数由价值网络评估， 网络结构和policy NN 相同，只是其最终输出层是一个没有任何激活函数的线性神经元[46]，并产生价值函数 Vπ(s,  θ)。 输入状态也和策略网络相同。 我们使用temporal  difference 方法[46]训练价值网络。 这里具体的实现要看 46号文献(简单来说, 时序差分强化学习方法是**每一个step就更新一次** ，（比如我们的贪吃蛇游戏，贪吃蛇每移动一次（或几次）就进行更新）。相对来说，时序差分强化学习方法比蒙特卡洛强化学习方法更新的频率更快。时序差分强化学习能够在知道一个小step后就进行学习，相比于蒙特卡洛强化学习，其更加**快速、灵活**。)
 
 ​	**job-aware探索**。 为了通过 RL 获得好的策略，我们需要确保充分探索行动空间（即可以充分产生导致良好回报的行动）； 否则，RL 可能会收敛到较差的局部最优策略 [60] [46]。 我们首先采用一种常用的熵entropy探索方法，通过在梯度计算中添加熵正则化项 来更新策略网络[46]。  这样策略网络的参数 θ 朝着更高熵的方向更新（意味着探索更多的动作空间）
 
@@ -323,6 +323,10 @@ We first compare the performance of DL2 with baselines and show the overhead of 
 ### 6.4Generality
 
 **Training completion time variation.** To see how DL2 handles practical performance variation (which white-box schedulers may not handle well), we vary the training speeds in each type of jobs to simulate variation in the training completion time of the same type of jobs (the total numbers of epochs to train remain the same). In Fig. 13, the variation indicates how the training speed deviates from the average speed (which can be faster or slower by the respective percentage). We see that Optimus is more sensitive to the variation, as it can be easily stuck in local optimum: its scheduling relies on the convexity of the performance model, but training speed variation often breaks convexity. The average job completion time shown in all simulation figures is in time slots.
+
+
+
+**Other scheduling strategies for supervised learning.** We change the default DRF used in supervised learning of DL2 to two other heuristics, First-In-First-Out (FIFO) and Shortest-Remaining-Time-First (SRTF). Fig. 16 shows average job performance when DL2 uses each of these strategies in its supervised learning phase, when the NN trained only using supervised learning, or using both supervised learning and online RL, is evaluated on the validation dataset. In both cases, the performance is significantly improved with DL2, beyond what the existing scheduling strategy in the cluster can achieve (41.3% speedup in the case of SRTF).(代码上srtf和fifo好像很简单, 就push的依据换了一下, srtf 就是 看progress,  )
 
 ### 6.5 Training Design 
 
