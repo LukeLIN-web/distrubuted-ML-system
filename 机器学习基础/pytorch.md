@@ -2,13 +2,11 @@ pytorch
 
 自己学习到的, 可以用来查函数名字
 
-
+pytorch和tensorflow 区别http://www.xyu.ink/1785.html
 
 随机种子`manual_seed`
 
 ### 求导
-
-
 
 ```python
 y.backward()
