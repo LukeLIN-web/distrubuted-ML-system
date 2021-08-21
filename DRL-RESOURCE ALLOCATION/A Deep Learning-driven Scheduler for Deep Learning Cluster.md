@@ -38,7 +38,7 @@ D 哪些参考文献是值得follow的
 
 1. 需要深入了解 ML 框架和workload
 2.  模型和框架coupled
-3.  通常不考虑多租户集群的干扰 (怎么干扰的? )
+3.  通常不考虑多租户集群的干扰 (怎么干扰的?  This is because the jobs share underlying resources such as CPU caches, disk I/O, network I/O and buses. Some ML jobs are CPU intensive )
 
 ​	 In the second camp, recent studies have proposed white-box heuristics for resource allocation in ML clusters. Typically they tackle the problem in two steps: set up analytical models for DL/ML workloads, and propose scheduling heuristics accordingly for online resource allocation and adjustment. Designing heuristics requires a deep understanding of ML frameworks and workloads, and the analytical model is tightly coupled with the ML framework implementation (e.g., a new feature or optimization in evolving ML frameworks may invalidate the analytical model) [49]. Further, the modeling typically does not consider interference in a multi-tenant cluster (§2.2)
 
