@@ -5,7 +5,7 @@ week report 21 July
 ### Progress:
 
 1. I have written the idea1 steps.
-2. I have read the source codes of DL2 and some other DRL codes. 
+2. I have read the source codes of DL2 and some other DRL codes. (不要read一个大的, 要自己编写一个小的.)
 
 3. I have read some RL methods to solve reward sparse problems.
 
@@ -27,7 +27,7 @@ learning DL2 codes        :         des4, after des3, 2d
 
   DL2  could  resources  allocation,  but  it  still  use  default placement  policy  in  its  work,  the  placement  of  workers  and PSs can  potentially be decided  by RL  too. Using one  NN to produce  both  resource  allocation  and  placement  decisions  is challenging, mainly because of the significantly larger action space.  RL  using  a  hierarchical  NN  model  might  be  useful in  making  resource  allocation  and  placement  decisions  in  a hierarchical fashion.
 
-  Deep Reinforcement Learning, DRL has played an important role on game AI because games have concrete rewards. On the contrary, there are few rewards, few network update signals and sample inefficiency in practical applications. It is not so easy for agents to know all the elements in Markov Decision Process. Usually, the state transition function and reward function are difficult to estimate, and even the state in the environment may be unknown. At this time, model free learning is needed. Model free learning does not model the real environment. The agent can only perform actions through certain strategies in the real environment, wait for rewards and state migration, and then update the behaviour strategy according to these feedback information. In this way, it iterates repeatedly until the optimal strategy is learned.
+  Deep Reinforcement Learning, DRL has played an important role on game AI because games have concrete rewards. On the contrary, there are few rewards, few network update signals and sample inefficiency in practical applications. It is not so easy for agents to know all the elements in Markov Decision Process. Usually, the state transition function and reward function are difficult to estimate, and even the state in the environment may be unknown. At this time, model free learning is needed. Model free learning does not model the real environment. The agent can only perform actions through certain strategies in the real environment, wait for rewards and state migration, and then update the behavior strategy according to these feedback information. In this way, it iterates repeatedly until the optimal strategy is learned.
 
 Mirhoseini etc\cite{mirhoseini2017device} uses a recurrent neural network policy network to predict the placement of operations in a computational graph, hierarchical model \cite{mirhoseini_hierarchical_2018} could efficiently place computational graphs onto hardware devices, especially in heterogeneous environments with a mixture of CPUs, GPUs, and other computational devices. It is based on data-flow instead of parameter server architecture. However, it cannot solve the following problems: 
 
@@ -81,6 +81,8 @@ I summary the reward design from different papers. I am learning the policy grad
 7.27
 
 I experiment the codes which mentioned by Yixin Bao. I am learning the policy gradient and DRL framework.
+
+(感觉跑一跑学不到什么, 得自己写一遍或者加一些功能或者改一改功能才行. 改参数也学不会.  )
 
 7.28
 
