@@ -43,9 +43,7 @@ batchSize --反比-->Statistical_Efficiency
 
 两个粒度, job 粒度 和cluster粒度.  pollux agent 拟合效率和吞吐量,  报告给scheduler, scheduler 定期根据每个job和总体cluster优化资源分配 . 也考虑了重分配的网络开销.  每个job的agent 报告goodputs, scheduler 动态分配资源. 
 
-
-
-遗传算法. 来调整策略. 我们可不可以用DRL?
+遗传算法. 来调整策略. 我们可不可以用DRL?  
 
 怎么测量goodput?  replica
 
@@ -89,7 +87,7 @@ Pollux adapts DL job execution at two distinct granularities. First, at a job-le
 
 ​       其次，PolluxSched 会定期优化集群中所有作业的资源分配，同时考虑每个作业的当前吞吐量函数和集群范围的资源争用情况。  PolluxSched 做出的调度决策还考虑了与资源重新分配相关的开销、由于多个作业之间的网络干扰导致的速度减慢以及资源公平性。  	
 
-​    PolluxAgent 和 PolluxSched 相互适应。   当 PolluxAgent 调整每个训练作业以有效利用其分配的资源时，PolluxSched 动态地重新分配每个作业的资源，同时考虑到 PolluxAgent 调整其作业的能力。
+​    PolluxAgent 和 PolluxSched 相互适应。  当 PolluxAgent 调整每个训练作业以有效利用其分配的资源时，PolluxSched 动态地重新分配每个作业的资源，同时考虑到 PolluxAgent 调整其作业的能力。
 
 ( 这一步很关键, 这一步就是DRL 怎么做出第一个决策后让第二个动态重新分配.)
 

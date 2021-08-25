@@ -53,7 +53,7 @@ time = throughout /bandwidth \\
 throughout= 2 * 4bytes * gradientNum* workerNum \\ 
 gradientNum = parameterNum
 $$
-When we use all-reduce architecture, worker communicate with other workers .
+When we use all-reduce architecture, worker communicate with other workers 
 
 $$
 time = throughout /bandwidth = 2*size(θ)*(N-1)/NB \\
