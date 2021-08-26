@@ -98,8 +98,11 @@ debug一晚上,
 
 1. dict() python2 有问题. python3 需要  list( values()) , 因为 values()返回不是pickleable可序列化对象, 是一个view视图对象, 不能修改.
 2. 做 , 验证集是怎么用的? 
+3. rl_env 很难调试, def test():我随便写的, 不知道怎么写不会出错. 
 
 
 
+8.25 
 
+写了5天ppt和 research statement. 老师还是问我要 result,
 

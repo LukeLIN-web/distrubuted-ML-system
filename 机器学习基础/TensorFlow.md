@@ -43,9 +43,7 @@ tf.nn.max_pool：池化层
 
 损失函数其实就是将算法结果（图中“算法结果”）和训练结果（图中的“结果”）进行对比，同算法一样，损失函数在定义的时候也用到了占位符，这个占位符代表的是训练数据集的结果数据。
 
-看了吴恩达的课程，里面介绍算法的时候用了cost function（成本函数），我简单研究了一下，这个函数和损失函数是相关的，简单来说：**损失函数是针对单个训练样本的，成本函数是针对所有训练样本的均值**，我们只需要定义损失函数，我猜测优化器会基于损失函数来计算成本函数，更多请参考：[机器学习中的目标函数、损失函数、代价函数有什么区别？](https://www.zhihu.com/question/52398145)
-
-玩过深度学习的可能还会有一个类似的概念：激活函数，激活函数不是tensorflow必须的，而只有在使用神经网络算法的时候要用到，例如上述函数求解就不会用到激活函数，但算法和损失函数是必须的。
+看了吴恩达的课程，里面介绍算法的时候用了cost function（成本函数），我简单研究了一下，这个函数和损失函数是相关的，简单来说：**损失函数是针对单个训练样本的，成本函数是针对所有训练样本的均值**，我们只需要定义损失函数,更多请参考：[机器学习中的目标函数、损失函数、代价函数有什么区别？](https://www.zhihu.com/question/52398145)
 
 ### variable_scope
 
@@ -74,8 +72,6 @@ torch也可以输出模型的参数
 		logger.info(f"name: {name}, param: {param}")
 ```
 
-
-
 ### placeholder()
 
  Tensorflow的设计理念称之为计算流图，在编写程序时，首先构筑整个系统的graph，代码并不会直接生效，这一点和python的其他数值计算库（如Numpy等）不同，graph为静态的，类似于docker中的镜像。然后，在实际的运行时，启动一个session，程序才会真正的运行。这样做的好处就是：避免反复地切换底层程序实际运行的上下文，tensorflow帮你优化整个系统的代码。我们知道，很多python程序的底层为C语言或者其他语言，执行一行脚本，就要切换一次，是有成本的，tensorflow通过计算流图的方式，帮你优化整个session需要执行的代码，还是很有优势的。
@@ -87,3 +83,22 @@ torch也可以输出模型的参数
 `apply_gradients`和`compute_gradients`是所有的优化器都有的方法。
 
  \#执行对应变量的更新梯度操作 training_op = optimizer.apply_gradients(capped_gvs)
+
+### sess.run
+
+当我们构建完图后，需要在一个会话中启动图，启动的第一步是创建一个Session对象。
+
+为了取回（Fetch）操作的输出内容，可以在使用Session对象的run()调用执行图时，传入一些tensor，这些tensor会帮助你取回结果。
+
+在python语言中，返回的tensor是numpy ndarray对象。
+
+在执行sess.run()时，tensorflow并不是计算了整个图，只是计算了与想要fetch的值相关的部分。
+
+```python
+return self.sess.run([self.output, self.loss], feed_dict={self.input:input, self.label:label})
+```
+
+
+
+### 创建网络
+

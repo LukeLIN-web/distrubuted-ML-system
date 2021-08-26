@@ -45,3 +45,31 @@ for name,param in policy_net.net.named_parameters():
 		epoch = checkpoint(['epoch'])
 ```
 
+
+
+### optimizer类
+
+
+
+### loss类
+
+```
+"Mean_Square":
+"Cross_Entropy":  Pytorch中CrossEntropyLoss()函数的主要是将softmax-log-NLLLoss合并到一块得到的结果。
+"Absolute_Difference":
+```
+
+自定义损失函数  [pytorch系列12 --pytorch自定义损失函数custom loss function_墨流觞的博客-CSDN博客_pytorch 自定义loss](https://blog.csdn.net/dss_dssssd/article/details/84103834)
+
+MSELoss 
+
+```
+criterion = nn.MSELoss()
+loss = nn.MSELoss()
+```
+
+```python
+output, loss = net.get_sl_loss(np.stack(inputs), np.vstack(labels))
+# stack 叠起来, vstack 
+```
+
