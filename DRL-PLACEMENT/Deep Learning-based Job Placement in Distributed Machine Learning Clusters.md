@@ -1,12 +1,14 @@
 Deep Learning-based Job Placement in Distributed Machine Learning Clusters
 
-harmony 为什么用DRL 不用LSTM? 有什么区别? 
-
- You can try LSTM. I tried it but the performance is not good enough. For Google's paper, I tried that before but did not get how they built a dynamic NN. 就是dynamic RNN.
-
-
-
 > 作者的话: We read the source code of Pensive (https://github.com/hongzimao/pensieve) and DeepRM (https://github.com/hongzimao/deeprm) as reference during our implementation. The integration with Kubernetes API is similar to Optimus (https://github.com/pengyanghua/optimus). If you have any concrete questions about the implementation details, feel free to ask us.
+>
+> harmony 为什么用DRL 不用LSTM? 有什么区别? 
+>
+>  You can try LSTM. I tried it but the performance is not good enough. For Google's paper, I tried that before but did not get how they built a dynamic NN. 就是dynamic RNN.
+
+
+
+
 
 A 尝试解决什么问题
 
@@ -27,12 +29,6 @@ B方法有哪些关键元素
 C 有什么我可以用的
 
 policy NN应该可以用.
-
-那么reward 可以用吗?  可以用。 
-
-
-
-
 
 ## Abstract
 

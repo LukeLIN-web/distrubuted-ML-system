@@ -1,5 +1,7 @@
 A Deep Learning-driven Scheduler for Deep Learning Cluster  2019 sept13
 
+为什么分配worker多了不行?
+
 A 尝试解决什么问题
 
 问题是

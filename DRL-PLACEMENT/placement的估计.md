@@ -171,3 +171,23 @@ $$
 
 在单机多卡的场景中，由于 PCIe 是全双工的(可以同时收发)，所以数据传输的耗时只有 ![[公式]](https://www.zhihu.com/equation?tex=%5Cfrac%7B%28N-1%29%7D%7BNB%7D+%5Ctextrm%7Bsize%7D%28%5Ctheta%29) , 其中 ![[公式]](https://www.zhihu.com/equation?tex=B) 是 PCIe 设备传输的带宽.
 
+
+
+
+
+怎么建模通讯时间?
+
+https://core.ac.uk/download/pdf/157810919.pdf 论文里有图. 
+
+同一个机器的GPU-GPU走nvilink( 假设inner server GPU都是互联,其实可能有的GPU不互联) CPU-GPU走pcie, 跨机器就是以太网, 
+
+可以尝试就按这个最简单的模型建模communication
+
+
+
+
+
+NUMA :浅解NUMA机制 - 柴可夫斯猫的文章 - 知乎 https://zhuanlan.zhihu.com/p/67558970每个node 有独立的内存器件.
+
+UMA(Uniform Memory Access)，直译为“统一内存访问”，这样的架构对软件层面来说非常容易，总线模型保证所有的内存访问是一致的，即**每个处理器核心共享相同的内存地址空间**。但随着CPU核心数的增加，这样的架构难免遇到问题，比如对总线的带宽带来挑战、访问同一块内存的冲突问题。
+

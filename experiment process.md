@@ -106,3 +106,52 @@ debug一晚上,
 
 写了5天ppt和 research statement. 老师还是问我要 result,
 
+写了一晚上, 写到神经网络有点难顶, 看不懂tflearn的连接, 还有一堆条件连接. 
+
+8.27
+
+感觉这两天要是搞出来的话,还是得把源代码跑通比较现实, 配环境头痛.
+
+ImportError: libcublas.so.10.0: cannot open shared object file: No such file or directory
+
+py3.7降低到3.5 . 空间不足不能安装, 问学长. 
+
+colab试试. 拿不出东西来, 用它的源代码头痛是配置tensorflow的环境, 自己pytorch是神经网络不会.
+
+卸载tesnorflow, 安装tensorflow 1.13.1 
+
+安装python2.7 好像colab也自带了.
+
+```text
+!apt-get install python2.7
+!python2 -m pip uninstall tensorflow
+!python2 -m pip install tensorflow-gpu==1.13.1
+!python2 -m pip list
+!python2 train.py
+```
+
+安装了显示没有tensorflow, 一种解决方法是需要配置tensorflow的路径到sys.path中。
+
+那要不还是用python3跑, 我之前也改过代码了.
+
+```python
+!python -m pip uninstall tensorflow
+!python -m pip install tensorflow-gpu==1.13.1
+!pip install tflearn
+!python train.py
+```
+
+不知道它到底train了个啥. 
+
+改了一下好像可以sl了. 但是tensorboard看不到,我得看看有哪些指标. 
+
+1. 训练速度, sl 弄不出来, 因为是根据标签一样不一样来判断的. 
+
+2. 应该可以打印loss的.监督学习.   感觉也挺简单的, 就是很多很多问题, 要做的快很难. 
+
+   比如这里step好像卡住了. 不知道为啥 train.py:456 INFO: len(self.completed_jobs)25 train.py:461 INFO: len(self.memory)8192 然后就卡住了. 应该是 \# pull latest weights before training 出问题了.
+
+   没有get到weight
+
+3.   comparsion的线程池不对, 我忘了我之前pytorch写的好像也出错了忘记哪里出错了, 哦,好像是因为那个. import.
+

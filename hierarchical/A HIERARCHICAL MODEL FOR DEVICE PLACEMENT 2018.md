@@ -2,9 +2,13 @@ A HIERARCHICAL MODEL FOR DEVICE PLACEMENT 2018
 
 前身是Device Placement Optimization with Reinforcement Learning , 这篇文章拓展成了hierarchy. 加了group.
 
+计算图, data flow和  PS placement的区别是什么? 效果更好?  处理更复杂?  不是一个维度的问题, 计算图的placement还和计算中的通信顺序有关,那是model parallel的方式,你还要决策op的scheduling. 
+
+ps placement简单很多,就是影响 parameter synchronization的通信.
+
 加了group好处是什么?
 
-可以自动分组. 减少operation, 避免梯度爆炸.  我们的设计应不会有梯度爆炸, 因为我们allocation不会过大, 还是一样的大小.
+可以自动分组. 减少operation, 避免梯度爆炸.  我们的设计应不会有梯度爆炸, 因为我们allocation不会过大, 还是一样的大小.多一个异构gpu就复杂挺多,可以先考虑最简单的同构的,他是把一个计算图,也就是具体op的graph做place,和我们的维度不一样,是完全不同的问题
 
 ```http
 https://q.uiver.app/?q=WzAsMjYsWzEsNywib3AxIl0sWzMsNywib3AyIl0sWzUsNywib3AzIl0sWzMsNiwiZW1iZWRkaW5nMiJdLFszLDksImNvbXB1dGluZ1xcXFxncmFwaCJdLFsxLDYsImVtYmVkZGluZzEiXSxbNSw2LCJlbWJlZGRpbmczIl0sWzYsNywib3AuLi4iXSxbMCw2LCJvcFxccXVhZCBlbWJlZGRpbmciXSxbMSw1LCJncm91cFxccXVhZCBpZCJdLFszLDUsImdyb3VwXFxxdWFkIGlkIl0sWzUsNSwiZ3JvdXBcXHF1YWQgaWQiXSxbMCwzLCJncm91cFxccXVhZCBlbWJlZGRpbmciXSxbMCwyLCJoaWRkZW5cXHF1YWQgc3RhdGUiXSxbMSwzLCJnMSJdLFszLDMsImcyIl0sWzQsMywiZzMiXSxbMSwyLCLlj6MiXSxbMywyLCLlj6MiXSxbNCwyLCLlj6MiXSxbNSwyLCLlj6MiXSxbNSwwLCJkZXZpY2VcXHF1YWQgZm9yXFxcXGdyb3VwMSJdLFswLDEsImF0dGVudGlvbiJdLFswLDAsInNvZnRtYXgiXSxbNiwyLCLlj6MiXSxbNiwwLCJkZXZpY2VcXHF1YWQgZm9yXFxcXGdyb3VwMiJdLFsxLDNdLFs0LDFdLFs0LDBdLFs0LDJdLFswLDVdLFsyLDZdLFs0LDddLFs1LDldLFszLDEwXSxbNiwxMV0sWzEwLDE0LCIiLDEseyJsZXZlbCI6Mn1dLFs5LDE1LCIiLDAseyJsZXZlbCI6Mn1dLFsxMSwxNiwiIiwwLHsibGV2ZWwiOjJ9XSxbMTQsMTddLFsxNywxOF0sWzE1LDE4XSxbMTgsMTldLFsxNiwxOV0sWzE5LDIwXSxbMjAsMjFdLFsyNCwyNV0sWzIwLDI0XV0=
@@ -26,7 +30,7 @@ https://q.uiver.app/?q=WzAsMjYsWzEsNywib3AxIl0sWzMsNywib3AyIl0sWzUsNywib3AzIl0sW
 
 它的问题:
 
-1. 只能一个模型产生了op然后优化, 是非常局限的. 不能多个模型一起placement
+1. 只能一个模型产生了op然后优化, 是非常局限的. 不能多个模型一起placement,他的device placement和 harmony不是一种, 这篇文章是异构的GPU TPU 分配, harmony是co-jobs 的问题.   
 2.  
 
 摘要
