@@ -73,3 +73,13 @@ output, loss = net.get_sl_loss(np.stack(inputs), np.vstack(labels))
 # stack 叠起来, vstack 
 ```
 
+
+
+检查全连接层的参数:  print(net[2].state_dict())
+
+X = torch.rand(size=(2, 4))
+
+```python
+tensor.double() 可能会显示tensor(xxx, dtype =float64)# 64位就是double.
+tensor.float() 可能会显示tensor(xxx) # 有小数点就是float
+```
