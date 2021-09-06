@@ -1,10 +1,6 @@
 ### report speech 
 
-各位老师好!
-
-我是林炬乙
-
-很高兴能在这里展示我暑期科研的成果.  我科研项目的主题是利用hierarchical reinforcement learning to jointly allocate GPU resources and place jobs. 
+我科研项目的主题是利用hierarchical reinforcement learning to jointly allocate GPU resources and place jobs. 
 
 首先我们来介绍一下我们的背景. 
 
@@ -16,15 +12,7 @@
 
 目前, Tiresias 处理将 GPU 分配给单个作业（即作业放置）和随时间调度多个作业。 但它是非规模自适应调度程序。 它要求用户在提交作业时指定 GPU 数量，该数量将在作业的生命周期内固定。 另外没有考虑共同的干扰.
 
-
-
-
-
 我们希望能联合,Co-adaptive Cluster Scheduler for DL.
-
-
-
-
 
 
 
