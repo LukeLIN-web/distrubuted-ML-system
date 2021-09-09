@@ -227,4 +227,18 @@ pull weights,在tensorflow里可以直接用model.get_weights()和model.set_weig
 
 episode 每个episode 会验证一次然后保存性能好的模型. epoch就是所有数据examples都完成了一次.
 
-[Digital-image-process/cifar10.py at main · LukeLIN-web/Digital-image-process (github.com)](https://github.com/LukeLIN-web/Digital-image-process/blob/main/Final Project/code and data/cifar10.py)****
+[Digital-image-process/cifar10.py at main · LukeLIN-web/Digital-image-process (github.com)](https://github.com/LukeLIN-web/Digital-image-process/blob/main/Final Project/code and data/cifar10.py)
+
+怎么证明 SL收敛到DRF了? NN的决策 reward = DRF的决策 reward?还是 JCT相同. validate 就是simulate了一个环境, 然后step一步步直到job结束.
+
+为什么simulate 需要drf_env, 那drf和net什么关系? 怎么对比DRF和我们net的makespan? 是否需要RL_env? RL_env 没有
+
+目前`num_jobs, jct, makespan, reward = env.get_results()` 
+
+网络为啥是torch.Size([256, 5, 61])? 20个job, 因为 input 256个traj.state.
+
+```
+ACTION_DIM = 3 * SCHED_WINDOW_SIZE + SKIP_TS  
+3*20 +1 61个
+```
+
