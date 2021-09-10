@@ -4,11 +4,7 @@ Deep Learning-based Job Placement in Distributed Machine Learning Clusters
 >
 > harmony 为什么用DRL 不用LSTM? 有什么区别? 
 >
->  You can try LSTM. I tried it but the performance is not good enough. For Google's paper, I tried that before but did not get how they built a dynamic NN. 就是dynamic RNN.
-
-
-
-
+>  You can try LSTM. I tried it but the performance is not good enough. For Google's paper, I tried that before but did not get how they built a dynamic NN. 
 
 A 尝试解决什么问题
 
@@ -16,7 +12,7 @@ A 尝试解决什么问题
 
 2. 增强了奖励模型.  采用了 actor-critic , job-aware action space exploration and experience replay.  
 
-3. **如何才能高效并行的产生海量的数据供神经网络进行学习是大规模深度强化学习的关键。**缺乏不同place 决策的奖励样本, 构建了一个辅助奖励预测模型,  历史样本训练value NN  . 然后valueNN 产生reward 让policyNN 可以不需要online也可以不断强化.
+3. **如何才能高效并行的产生海量的数据供神经网络进行学习是大规模DRL的关键。**缺乏不同place 决策的奖励样本, 构建了一个辅助奖励预测模型,  历史样本训练value NN. 然后valueNN 产生reward 让policyNN 可以不需要online也可以不断强化.
 
 B方法有哪些关键元素
 
@@ -38,15 +34,15 @@ policy NN应该可以用.
 
 ## 一introduction
 
-  worker和PS, 怎么高效place到服务器上? 
+  worker和PS, 怎么高效place到服务器上?
 
 许多调度器如 borg , mesos 给job分配更多CPU和内存, server少一些.    但是因为jobs 共享底层资源,  CPU caches, disk  IO ,  network IO and buses QPI,PCIe.  比如   GPU 分配给不同的ML  , job shuffle data between CPU和GPU时就share PCIe bus .    在NUMA 中, 两个分配的GPU没连到同一个CPU就要共享QPI（CPU到内存更快，）.  
 
-一些ML 模型  CTC 读取图像预处理, 就是CPU 密集型,  一些AlexNET是磁盘IO 密集型,  一些网络带宽消耗大因为模型尺寸大(参数数量多) minibatch 小(worker之间参数交换多) 如VGG 16
+一些ML 模型  CTC 读取图像预处理, 就是CPU 密集型,  一些AlexNET是磁盘IO 密集型,  一些网络带宽消耗大因为模型尺寸大(参数数量多) minibatch小(worker之间参数交换多) 如VGG 16
 
 我们需要把低干扰的job放一起, 但是yarn , mesos是不考虑的.  一些文章 建立了干扰模型, 手动启发式把干扰纳入调度, 但是几十个干扰源, 需要仔细优化参数或者阈值, 而且不通用, workload type 或者硬件配置变了就不好用了. 
 
-所以这里黑盒,  在NN中encode workload 干扰, 把raw cluster和 job 状态 map 到 job placement 选择. 
+所以这里黑盒,  在NN中encode workload 干扰, 把raw cluster和 job 状态 map 到 job placement 选择.
 
 贡献如下: 
 
@@ -55,7 +51,7 @@ policy NN应该可以用.
 
 ## 二 background and motivation
 
-### a. 分布式学习	
+### a. 分布式学习
 
 SGD到底是PS 选一些 还是 worker选一些? 是worker选一些, PS是把所有worker发来的梯度都用上. 
 
@@ -75,11 +71,11 @@ SGD到底是PS 选一些 还是 worker选一些? 是worker选一些, PS是把所
 
 比较三种策略, 负载平衡: mesos,k8s,  多资源打包: google borg和tetris,  独立执行: 我们自己写. 
 
-独立执行最好, 但是资源没有充分利用. 
+独立执行最快, 但是资源没有充分利用. 
 
 ideally,  bin应该优于负载balance, 因为PS和worker在一起不用跨机器通信.  但是由于干扰就不一定.  放同一个服务器的越多干扰越严重. 
 
- Standalone execution leads to the best performance, but also resource underutilization. Ideally, bin packing should outperform load balancing, in terms of both resource utilization and training performance, since it avoids cross-machine communication by placing PS and worker together. But this is not true when the second job trains ResNeXt-110, which performs better under the load balancing scheme. This is due to the more severe interference between training ResNeXt and CTC together. Fig. 5 further shows the training speed of ResNeXt (or VGG) when the number of co-located CTC training jobs increases. The more jobs are co-located, the worse the interference is.
+ Standalone execution leads to the best performance, but also resource underutilization. Ideally, bin packing should outperform load balancing, in terms of both resource utilization and training performance, since it avoids cross-machine communication by placing PS and worker together. But this is not true when the second job trains  , which performs better under the load balancing scheme. This is due to the more severe interference between training ResNeXt and CTC together. Fig. 5 further shows the training speed of ResNeXt (or VGG) when the number of co-located CTC training jobs increases. The more jobs are co-located, the worse the interference is.
 
 更多job colocated, 组合数量huge, 难识别和建模interference. 
 
@@ -91,9 +87,9 @@ All 3 schemes are not good enough to achieve high resource utilization and train
 
 2. 没有这么多traces 覆盖所有possible placement.  样本不够就不能训练DRL NN收敛到一个好的policy.  
 
- 解决方法:  为了训练我们的 DRL 模型，我们需要一种方法来为 DRL 生成的placement decisions  提供 synthetic(合成)reward samples . 这个placement decisions是历史 ML 集群trace中不存在的。 我们不依赖分析干扰模型 [11] [12]，而是采用更通用的方法，使用**另一个 NN 进行奖励建模，使用可用trace通过监督学习进行训练。**
+ 解决方法:  为了训练我们的 DRL 模型，我们需要一种方法来为 DRL 生成的placement decisions  提供 synthetic(合成)reward samples . 这个placement decisions是历史ML 集群trace中不存在的。 我们不依赖分析干扰模型 [11] [12]，而是采用更通用的方法，使用**另一个 NN 进行奖励建模，使用可用trace通过监督学习进行训练。**
 
- 奖励建模 监督学习.  所以就是自己训练自己, 自己生成奖励. 因为之前的placement和reward是远远不够的. 
+ 奖励建模 是监督学习.  强化学习就是自己训练自己, 自己生成奖励. 因为之前的placement和reward是远远不够的. 
 
 输入: historical trace ,是有标签的. 
 
@@ -103,7 +99,7 @@ All 3 schemes are not good enough to achieve high resource utilization and train
 
 DRL训练什么？  训练NN参数。 选择通过reward model 获得虚拟trace。 重复了怎么办？ 重复了没关系， 继续强化这个action。
 
-online 训练什么 ？线上实际推断， 做出的placement和reward作为历史trace ，给reward model 监督学习。 
+online 训练什么 ？线上实际推断， 做出的placement和reward作为历史trace，给reward model 监督学习。 
 
 SL 训练什么？ 历史trace输入， NN调整参数， 拟合 历史输入和输出的关系。
 
