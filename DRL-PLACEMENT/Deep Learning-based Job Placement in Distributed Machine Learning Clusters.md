@@ -91,6 +91,8 @@ All 3 schemes are not good enough to achieve high resource utilization and train
 
  奖励建模 是监督学习.  强化学习就是自己训练自己, 自己生成奖励. 因为之前的placement和reward是远远不够的. 
 
+We use Historical Trace to get reward function, use reward function to produce synthetic traces. synthetic traces 
+
 输入: historical trace ,是有标签的. 
 
 输出: reward prediction 
@@ -120,6 +122,8 @@ harmony batches(批处理) interval中**新到达的**job, 然后决定他们的
  1  监督学习训练 奖励预测NN,为place 决定了的数据提供奖励评估. label是每个job的reward也就是训练速度. 输入是job 信息和placement.
 
 2 DRL 模型训练,  为新job 生成place决策
+
+他是收集了一连串的 状态, 还是自动得到后面的状态? 
 
 ## IV. DEEP REINFORCEMENT LEARNING BASED PLACEMENT POLICY
 
