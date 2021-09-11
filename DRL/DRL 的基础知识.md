@@ -13,7 +13,9 @@ reward !=goal, goal是累计reward最大. 也就是value最大.
 
 DRL 是不使用model的, 
 
-采用了DNN网络进行Q值的函数拟合, 就是DQN
+采用了DNN网络进行Q值的函数拟合, 就是DQN. 
+
+有过估计问题, 估计的值函数过大, 因为公式有max. 而且过估计量不均匀, 所以可能选不到最优的策略. double Qlearning 企图改进, 把动作的选择和评估用不同的值函数. 
 
 DQN有个主要改进点
 
