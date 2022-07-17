@@ -12,7 +12,6 @@ ImportError: libcublas.so.10.0: cannot open shared object file: No such file or 
 
 方法1:  我把代码抄一遍用pytorch复现一遍.
 
-朱junhao先写model, 然后写input ,然后train, 最后test.
 
 ### 尝试DL2
 
@@ -77,11 +76,7 @@ trace是有100个job list的字典.  一个job list 10个job
 
 好像看完了。 感觉不对， device placement的 模拟做不来？ 因为没有device 的trace ， co-located ， 这个trace不能用？  device placement的 trace 需要哪些参数？ 
 
-
-
 然后明天要干嘛
-
-8.15
 
  8.19日
 
@@ -241,4 +236,3 @@ episode 每个episode 会验证一次然后保存性能好的模型. epoch就是
 ACTION_DIM = 3 * SCHED_WINDOW_SIZE + SKIP_TS  
 3*20 +1 61个
 ```
-
