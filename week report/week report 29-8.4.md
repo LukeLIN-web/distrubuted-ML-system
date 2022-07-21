@@ -4,11 +4,6 @@ week report 29-08.04
 
 ### Progress:
 
-1. 
-2. 
-
-3. 
-
 ```mermaid
 gantt
 dateFormat  YYYY-MM-DD
@@ -21,8 +16,6 @@ learning DRL codes            :          2021-07-29,2d
 writing DL2 codes        :           2021-08-01,1d
 
 ```
-
-4. 
 
 ## day by day
 
