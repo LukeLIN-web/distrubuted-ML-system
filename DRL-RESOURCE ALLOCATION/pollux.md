@@ -1,4 +1,4 @@
-pollux
+![image](https://github.com/LukeLIN-web/distrubuted-ML-system/assets/60426396/854864ce-febf-4fd1-8a26-7a0a77738c49)pollux
 
 ### Pollux: Co-adaptive Cluster Scheduling for Goodput-Optimized Deep Learning osdi2021
 
@@ -66,24 +66,22 @@ pollux 都有.
 #### 3.1 Modeling Statistical Efficiency
 
 定义了EFFICIENCY,是 0到1之间的一个数值， 定义了不同batch size之间的训练效率区别。 用等式6来预测EFFICIENCY。
-figure2 测了各个模型的EFFICIENCY，上面一行展示了validation，但是感觉也没啥用。   中间一行有啥用？好像是说efficiency这个具有代表性,证明larger batch sizes have lower EFFICIENCYt early in training.  下面一行是证明预测的和实际上的很接近。  
+figure2 测了各个模型的EFFICIENCY，上面一行展示了validation，但是感觉也没啥用。 中间一行有啥用？好像是说efficiency这个具有代表性,证明larger batch sizes have lower EFFICIENCY early in training.  下面一行是证明预测的和实际上的很接近。   
 
+推荐系统和bert微调， batch size 大不一定efficiency低。
 
 #### 3.2 Modeling System Throughput
 
-
-
-
+他们预测每个iter的时间，预测吞吐量。 
+figure3 证明， 不同GPU和不同batch size， model都建模的很好。  他用nccl和pytorch 实际测了。 
 
 ### 4 Pollux Design and Architecture
 
 scheduler的工作: 定期分配资源给每个job, 考虑agent tune的能力, 
 
-job agent的工作:  调整超参数, 
+job agent的工作:  调整超参数
 
-Pollux adapts DL job execution at two distinct granularities. First, at a job-level granularity, Pollux dynamically tunes the batch size and learning rate for best utilization of the allocated resources. Second, at the cluster-wide granularity, Pollux dynamically (re-)allocates resources, driven by the goodput of all jobs sharing the cluster combined with cluster-level goals including fairness and job-completion time. To achieve this co-adaptivity in a scalable way, Pollux’s design consists of two primary components, as illustrated in Fig. 4. First, a PolluxAgent runs together with each job. It fits the EFFICIENCYt and THROUGHPUT functions for that job, and tunes its batch size and learning rate for efficient utilization
-
-​    Pollux 在两个不同的粒度上调整 DL 作业执行。 首先，在作业级别的粒度上，Pollux 动态调整batch size和学习率，以实现分配资源的最佳利用。 其次，在集群范围的粒度上，Pollux 动态（重新）分配资源， driven by 共享集群的所有作业的googput以及包括公平性和作业完成时间在内的集群级目标。 为了以可扩展的方式实现这种协同适应性，Pollux 的设计由两个主要组件组成，如图 4 所示。
+​    Pollux 在两个不同的粒度上调整 DL 作业执行。 首先，给每个job 动态调整batch size和学习率，以实现分配资源的最佳利用。 其次，整个集群动态（重新）分配资源， driven by 共享集群的所有作业的googput以及包括公平性和作业完成时间在内的集群级目标。
 
 ​     首先，一个 PolluxAgent 与每个作业一起运行。 它fit该作业的 EFFICIENCYt 和 THROUGHPUT 函数，并调整其batch size和学习率以实现高效利用其当前分配的资源。  PolluxAgent 定期向 PolluxSched 报告其作业的goodput函数。 
 
@@ -91,10 +89,7 @@ Pollux adapts DL job execution at two distinct granularities. First, at a job-le
 
 ​    PolluxAgent 和 PolluxSched 相互适应。  当 PolluxAgent 调整每个训练作业以有效利用其分配的资源时，PolluxSched 动态地重新分配每个作业的资源，同时考虑到 PolluxAgent 调整其作业的能力。
 
-( 这一步很关键, 这一步就是DRL 怎么做出第一个决策后让第二个动态重新分配.)
-
- PolluxAgent periodically reports the goodput function of its job to the PolluxSched. Second, the PolluxSched periodically optimizes the resource allocations for all jobs in the cluster, taking into account the current goodput function for each job and cluster-wide resource contention. Scheduling decisions made by PolluxSched also account for the overhead associated with resource re-allocations, slowdowns due to network interference between multiple jobs, and resource fairness. PolluxAgent and PolluxSched co-adapt to each other.
-While PolluxAgent adapts each training job to make efficient use of its allocated resources, PolluxSched dynamically re-allocates each job’s resources, taking into account the PolluxAgent’s ability to tune its job.
+( 这一步很关键, 可以思考DRL 怎么做出第一个决策后让第二个动态重新分配？)
 
 #### 4.1 PolluxAgent: Job-level Optimization
 
@@ -136,7 +131,7 @@ A 是一个分配矩阵，每行 Aj 是作业 j 的分配向量，因此 Ajn 是
 
 其中 GOODPUT j 是作业 j 在当前训练迭代中的输出量，af 是作业的公平资源分配，定义为集群的独占 1/J 份额。
 
-​    在第 3 节中，我们描述了 GOODPUT 函数如何在训练期间拟合观察到的指标，然后作为预测模型进行评估。  PolluxSched 利用这种能力来预测 GOODPUT，通过搜索过程最大化 FITNESS，然后将输出的分配应用于集群。 
+​ 在第 3 节中，我们描述了 GOODPUT 函数如何在训练期间拟合观察到的指标，然后作为预测模型进行评估。  PolluxSched 利用这种能力来预测 GOODPUT，通过搜索过程最大化 FITNESS，然后将输出的分配应用于集群。 
 
 **公平性和效果 p**。 当 p = 1 时，FITNESS p 是所有作业的 SPEEDUP 值的平均值。 这会导致 PolluxSched 将更多 GPU 分配给在提供许多 GPU 时实现高 SPEEDUP 的作业（即可扩展的作业）p = -1时比较公平. 
 
@@ -146,7 +141,7 @@ A 是一个分配矩阵，每行 Aj 是作业 j 的分配向量，因此 Ajn 是
 
 **Interference avoidance**
 
-When multiple distributed DL jobs share a single node, their network usage while synchronizing gradients and model parameters may interfere with each other, causing both jobs to slow down [31]; Xiao et al. [66] report up to 50% slowdown for DL jobs which compete with each other for network resources. PolluxSched mitigates this issue by disallowing different distributed jobs (each using GPUs across multiple nodes) from sharing the same node. (他是直接禁止两个job共享节点, 我们可以共享?  但是很难, 不好改.而且很奇怪, 图4明明共享了节点.)
+When multiple distributed DL jobs share a single node, their network usage while synchronizing gradients and model parameters may interfere with each other, causing both jobs to slow down [31]; Xiao et al. [66] report up to 50% slowdown for DL jobs which compete with each other for network resources. PolluxSched mitigates this issue by disallowing different distributed jobs (each using GPUs across multiple nodes) from sharing the same node. （因为网卡带宽不够，但是或许可以用rdma smartNIC啥的来帮助？）
 
 ### 4.3 Implementation
 
