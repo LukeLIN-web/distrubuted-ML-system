@@ -1,4 +1,4 @@
-![image](https://github.com/LukeLIN-web/distrubuted-ML-system/assets/60426396/854864ce-febf-4fd1-8a26-7a0a77738c49)pollux
+
 
 ### Pollux: Co-adaptive Cluster Scheduling for Goodput-Optimized Deep Learning osdi2021
 
