@@ -65,6 +65,8 @@ pollux 都有.
 
 #### 3.1 Modeling Statistical Efficiency
 
+定义了EFFICIENCY,是 0到1之间的一个数值， 定义了不同batch size之间的训练效率区别。 用等式6来预测EFFICIENCY。
+figure2 测了各个模型的EFFICIENCY，上面一行展示了validation，但是感觉也没啥用。   中间一行有啥用？好像是说efficiency这个具有代表性,证明larger batch sizes have lower EFFICIENCYt early in training.  下面一行是证明预测的和实际上的很接近。  
 
 
 #### 3.2 Modeling System Throughput
